@@ -2,6 +2,7 @@ package dev.msmr.client;
 
 import java.util.*;
 import dev.msmr.Rule;
+import dev.msmr.InventorySort;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.inventory.*;
@@ -13,6 +14,9 @@ public final class ClientTransfers {
     private static final Deque<Action> pending=new ArrayDeque<>();
     private static final Deque<Integer> fillSources=new ArrayDeque<>();
     private static AbstractContainerMenu active;
+    private static AbstractContainerMenu sortRequested;
+    private enum Batch { RESERVED, TO_CHEST, FROM_CHEST }
+    private static Batch batch=Batch.RESERVED;
     public static boolean emitting;
     public static boolean busy() { return !pending.isEmpty() || !fillSources.isEmpty(); }
     private static void message(String text) { var p=Minecraft.getInstance().player; if(p!=null) p.displayClientMessage(Component.literal(text),true); }
@@ -40,10 +44,40 @@ public final class ClientTransfers {
     public static void fillReserved() {
         var mc=Minecraft.getInstance();
         if(mc.player==null || busy() || !mc.player.containerMenu.getCarried().isEmpty()) return;
-        ClientRules.refresh(); active=mc.player.containerMenu;
+        ClientRules.refresh(); active=mc.player.containerMenu; batch=Batch.RESERVED;
         for(Slot slot:active.slots) if(slot.container==mc.player.getInventory() && slot.getContainerSlot()<36
             && !slot.getItem().isEmpty() && !ClientRules.moveRule(slot).preferred(slot.getItem())) fillSources.add(slot.index);
         message("Filling reserved slots using normal clicks...");
+    }
+    public static void requestSort() { var p=Minecraft.getInstance().player; if(p!=null) sortRequested=p.containerMenu; }
+    public static void cancelRequestedSort() { sortRequested=null; }
+    public static void sortInventory() {
+        var mc=Minecraft.getInstance();
+        if(mc.player==null || busy() || !mc.player.containerMenu.getCarried().isEmpty()) { message("Empty your cursor and finish the current move first."); return; }
+        ClientRules.refresh();
+        var menu=mc.player.containerMenu;
+        List<Slot> slots=menu.slots.stream().filter(s -> s.container==mc.player.getInventory() && s.getContainerSlot()>=0 && s.getContainerSlot()<36).sorted(Comparator.comparingInt(Slot::getContainerSlot)).toList();
+        if(slots.size()!=36) { message("Open your inventory or a supported chest to arrange items."); return; }
+        var result=InventorySort.plan(slots.stream().map(s -> s.getItem().copy()).toList(),slots.stream().map(ClientRules::rule).toList(),ClientRules.inventoryFilter());
+        if(!result.possible()) { message(result.error()); return; }
+        for(int i=0;i<slots.size();i++) {
+            Slot slot=slots.get(i); ItemStack goal=result.result().get(i);
+            if(!ItemStack.matches(slot.getItem(),goal) && (!slot.mayPickup(mc.player) || !goal.isEmpty() && (!slot.mayPlace(goal) || goal.getCount()>slot.getMaxStackSize(goal)))) { message("This menu restricts inventory arrangement. Open your normal inventory instead."); return; }
+        }
+        active=menu;
+        for(var click:result.clicks()) pending.add(new Action(slots.get(click.slot()).index,click.button(),click.cursor(),click.before()));
+        message(pending.isEmpty()?"Inventory is already arranged.":"Arranging inventory for "+ClientRules.activeProfile()+"...");
+    }
+    public static void transferAll(boolean toChest) {
+        var mc=Minecraft.getInstance();
+        if(mc.player==null || busy() || !(mc.player.containerMenu instanceof ChestMenu) || !mc.player.containerMenu.getCarried().isEmpty()) return;
+        if(toChest?!ClientRules.tools().transferTo():!ClientRules.tools().transferFrom()) return;
+        ClientRules.refresh(); active=mc.player.containerMenu; batch=toChest?Batch.TO_CHEST:Batch.FROM_CHEST;
+        for(Slot slot:active.slots) {
+            boolean player=slot.container==mc.player.getInventory() && slot.getContainerSlot()>=0 && slot.getContainerSlot()<36;
+            if(player==toChest && !slot.getItem().isEmpty()) fillSources.add(slot.index);
+        }
+        message(toChest?"Moving allowed items to chest...":"Moving allowed items to inventory...");
     }
     private static void plan(AbstractContainerMenu menu,Slot from,List<Slot> targets) {
         if(busy() && !pending.isEmpty()) return;
@@ -57,7 +91,7 @@ public final class ClientTransfers {
             Rule rule=ClientRules.moveRule(to);
             ItemStack existing=to.getItem().copy();
             if(!ClientRules.accepts(to,cursor) || !to.mayPlace(cursor) || (!existing.isEmpty() && !ItemStack.isSameItemSameComponents(existing,cursor))) continue;
-            int available=Math.max(0,Math.min(rule.cap(cursor),to.getMaxStackSize(cursor))-existing.getCount());
+            int available=Math.max(0,Math.min(Math.min(rule.cap(cursor),ClientRules.moveInventoryFilter(to).cap(cursor)),to.getMaxStackSize(cursor))-existing.getCount());
             int amount=Math.min(available,cursor.getCount());
             if(amount==0) continue;
             int vanillaCapacity=to.getMaxStackSize(cursor)-existing.getCount();
@@ -77,6 +111,10 @@ public final class ClientTransfers {
     }
     public static void tick() {
         var mc=Minecraft.getInstance();
+        if(sortRequested!=null) {
+            if(mc.player==null || mc.player.containerMenu!=sortRequested) sortRequested=null;
+            else if(mc.screen instanceof net.minecraft.client.gui.screens.inventory.AbstractContainerScreen<?> && !busy()) { sortRequested=null; sortInventory(); }
+        }
         if(mc.player==null || mc.gameMode==null || mc.player.containerMenu!=active || !(mc.screen instanceof net.minecraft.client.gui.screens.inventory.AbstractContainerScreen<?>)) {
             pending.clear(); fillSources.clear(); active=null; return;
         }
@@ -85,7 +123,10 @@ public final class ClientTransfers {
             while(!fillSources.isEmpty() && pending.isEmpty()) {
                 Slot from=active.getSlot(fillSources.removeFirst());
                 List<Slot> targets=new ArrayList<>();
-                for(Slot to:active.slots) if(to.index!=from.index && to.container==mc.player.getInventory() && to.getContainerSlot()<36 && ClientRules.moveRule(to).preferred(from.getItem())) targets.add(to);
+                for(Slot to:active.slots) if(to.index!=from.index) {
+                    boolean player=to.container==mc.player.getInventory() && to.getContainerSlot()>=0 && to.getContainerSlot()<36;
+                    if(batch==Batch.RESERVED?player && ClientRules.moveRule(to).preferred(from.getItem()):player==(batch==Batch.FROM_CHEST)) targets.add(to);
+                }
                 plan(active,from,targets);
             }
         }

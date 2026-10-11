@@ -1,5 +1,14 @@
 # Releases
 
+## 0.9.0 · Switch gear. Move the right stuff.
+
+- **Transfer all:** arrows above a chest move allowed items in either direction, respecting destination profiles, slot rules, capacity, and stack caps.
+- **Five quick profiles:** new saved profiles automatically join a compact panel beside the inventory, up to five shortcuts.
+- **Your shortcut style:** choose one letter or an item icon, plus a palette or custom background colour. Defaults use the first letter and a random colour.
+- **Automatic arrangement:** switching profiles puts matching items in saved slots and clears missing-item reservations when enough allowed space exists.
+- **Safe planning:** full-inventory tool swaps work without an empty buffer slot. Impossible arrangements leave items in place; counts and components are preserved.
+- **Organized Advanced menu:** Filters & slots, Profiles, and Transfers & sorting. Both transfer directions, the quick panel, and arrangement on switching have separate toggles.
+
 ## 0.8.0 · Every chest gets its own rules
 
 - **Automatic chest profiles:** whole-chest filters and individual slot rules save to each storage block's world, dimension, and position.

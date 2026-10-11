@@ -30,11 +30,15 @@ public abstract class ScreenMixin extends Screen implements InventoryAnchor {
     @Unique private boolean msmr$editing;
     @Unique private Button msmr$button;
     @Unique private final java.util.List<Button> msmr$tabs=new java.util.ArrayList<>();
+    @Unique private final java.util.List<Button> msmr$shortcuts=new java.util.ArrayList<>();
+    @Unique private final java.util.List<Button> msmr$transfers=new java.util.ArrayList<>();
+    @Unique private String msmr$controls="";
     @Inject(method="init", at=@At("TAIL"))
     private void msmr$request(CallbackInfo ci) {
         ClientRules.refresh();
         msmr$consumed=false;
         msmr$tabs.clear();
+        msmr$shortcuts.clear(); msmr$transfers.clear(); msmr$controls="";
         boolean chest=ClientRules.hasChest();
         msmr$button=msmr$tab(msmr$editing?"Done":chest?"Chest":"Pickups",chest?"Chest filters: saved automatically to this chest":"Pickup filters: choose which drops to collect",b -> {
             if(msmr$editing) msmr$editSlots(false);
@@ -74,18 +78,49 @@ public abstract class ScreenMixin extends Screen implements InventoryAnchor {
         msmr$positionTabs();
     }
     @Unique private void msmr$positionTabs() {
-        int y=Math.max(0,Math.min(topPos+6,height-48));
+        msmr$updateControls();
+        int y=Math.max(0,Math.min(topPos+6,height-52-msmr$shortcuts.size()*24));
         for(int i=0;i<msmr$tabs.size();i++) {
             Button tab=msmr$tabs.get(i); tab.setX(msmr$tabLeft()); tab.setY(y+i*24);
             tab.active=!ClientTransfers.busy();
         }
+        for(int i=0;i<msmr$shortcuts.size();i++) { Button b=msmr$shortcuts.get(i); b.setX(msmr$tabLeft()+2); b.setY(y+52+i*24); b.active=!ClientTransfers.busy() && Minecraft.getInstance().player.containerMenu.getCarried().isEmpty(); }
+        for(int i=0;i<msmr$transfers.size();i++) { Button b=msmr$transfers.get(i); b.setX(leftPos+imageWidth-44+i*22); b.setY(Math.max(0,topPos-20)); b.active=!ClientTransfers.busy() && Minecraft.getInstance().player.containerMenu.getCarried().isEmpty(); }
+    }
+    @Unique private void msmr$updateControls() {
+        var mc=Minecraft.getInstance(); if(mc.player==null) return;
+        var options=ClientRules.tools(); var profiles=options.shortcuts()?ClientRules.quickProfiles():java.util.List.<String>of();
+        boolean chest=((AbstractContainerScreen<?>)(Object)this).getMenu() instanceof net.minecraft.world.inventory.ChestMenu;
+        String signature=profiles.toString()+options.toString()+chest;
+        if(signature.equals(msmr$controls)) return;
+        msmr$shortcuts.forEach(this::removeWidget); msmr$transfers.forEach(this::removeWidget); msmr$shortcuts.clear(); msmr$transfers.clear(); msmr$controls=signature;
+        for(String name:profiles) {
+            Button b=new ProfileButton(0,0,name,pressed -> { String result=ClientRules.manageProfile("switch",name,""); mc.player.displayClientMessage(Component.literal(result),true); });
+            addRenderableWidget(b); msmr$shortcuts.add(b);
+        }
+        if(chest) { if(options.transferTo()) msmr$transfer(true); if(options.transferFrom()) msmr$transfer(false); }
+    }
+    @Unique private void msmr$transfer(boolean toChest) {
+        Button b=new Button(0,0,20,18,Component.literal(toChest?"Transfer to chest":"Transfer to inventory"),pressed -> ClientTransfers.transferAll(toChest),supplier -> supplier.get()) {
+            @Override protected void renderWidget(GuiGraphics g,int mx,int my,float delta) {
+                int x=getX(),y=getY(); g.fill(x,y,x+20,y+18,isHoveredOrFocused()?0xFFFFFFFF:0xFF555555); g.fill(x+1,y+1,x+19,y+17,0xFFC6C6C6);
+                int color=active?0xFF303030:0xFF888888; g.fill(x+9,y+4,x+11,y+14,color);
+                for(int n=0;n<4;n++) { int ay=toChest?y+3+n:y+14-n; g.fill(x+9-n,ay,x+11+n,ay+1,color); }
+            }
+        };
+        b.setTooltip(Tooltip.create(Component.literal(toChest?"Move all allowed inventory items to this chest, including your hotbar. Blocked items stay put.":"Move all allowed chest items to your inventory. Player and slot filters still apply.")));
+        addRenderableWidget(b); msmr$transfers.add(b);
     }
     @Override public void msmr$renderTabs(GuiGraphics g,int mx,int my,float delta) {
         msmr$positionTabs();
         for(Button button:msmr$tabs) button.render(g,mx,my,delta);
+        for(Button button:msmr$shortcuts) button.render(g,mx,my,delta);
+        for(Button button:msmr$transfers) button.render(g,mx,my,delta);
     }
     @Override public boolean msmr$clickTabs(double x,double y,int button) {
         for(Button tab:msmr$tabs) if(tab.mouseClicked(x,y,button)) { setFocused(tab); return true; }
+        for(Button tab:msmr$shortcuts) if(tab.mouseClicked(x,y,button)) { setFocused(tab); return true; }
+        for(Button tab:msmr$transfers) if(tab.mouseClicked(x,y,button)) { setFocused(tab); return true; }
         return false;
     }
 

@@ -4,6 +4,7 @@ import dev.msmr.Rule;
 import dev.msmr.ProfileBook;
 import dev.msmr.ChestAddress;
 import dev.msmr.ChestProfile;
+import dev.msmr.QuickProfiles;
 import com.google.gson.Gson;
 import java.nio.file.*;
 import java.util.*;
@@ -22,6 +23,10 @@ public final class ClientRules {
     private static Settings settings = new Settings();
     private static boolean loaded;
     private static Path file;
+    public record Tools(Boolean transferTo,Boolean transferFrom,Boolean shortcuts,Boolean sortOnSwitch) {
+        public Tools { transferTo=transferTo==null?true:transferTo; transferFrom=transferFrom==null?true:transferFrom; shortcuts=shortcuts==null?true:shortcuts; sortOnSwitch=sortOnSwitch==null?true:sortOnSwitch; }
+        public static final Tools DEFAULT=new Tools(true,true,true,true);
+    }
     public static final class Settings {
         public Map<String, Map<Integer, Rule>> inventories = new HashMap<>();
         public Map<String, Map<Integer, Rule>> profiles = new HashMap<>();
@@ -29,6 +34,8 @@ public final class ClientRules {
         public Map<String,ProfileBook> books = new HashMap<>();
         public Map<String,String> activeProfiles = new HashMap<>();
         public Map<String,Map<String,ChestProfile>> chests = new HashMap<>();
+        public Map<String,QuickProfiles> shortcuts = new HashMap<>();
+        public Tools tools=Tools.DEFAULT;
     }
     public static void init() {
         if (loaded) return;
@@ -40,6 +47,8 @@ public final class ClientRules {
             if(settings.books==null) settings.books=new HashMap<>();
             if(settings.activeProfiles==null) settings.activeProfiles=new HashMap<>();
             if(settings.chests==null) settings.chests=new HashMap<>();
+            if(settings.shortcuts==null) settings.shortcuts=new HashMap<>();
+            if(settings.tools==null) settings.tools=Tools.DEFAULT;
             validate(settings);
             for(var old:settings.profiles.entrySet()) {
                 int divider=old.getKey().lastIndexOf('/');
@@ -71,6 +80,8 @@ public final class ClientRules {
         }
         for(String name:data.activeProfiles.values()) ProfileBook.validate(name);
         Objects.requireNonNull(data.chests);
+        Objects.requireNonNull(data.tools); Objects.requireNonNull(data.shortcuts);
+        for(var shortcuts:data.shortcuts.values()) Objects.requireNonNull(shortcuts).validate();
         for(var storage:data.chests.values()) {
             Objects.requireNonNull(storage);
             for(var entry:storage.entrySet()) {
@@ -132,12 +143,25 @@ public final class ClientRules {
     private static ProfileBook book() { return settings.books.computeIfAbsent(scope,k -> new ProfileBook()); }
     public static List<String> profileNames() { refresh(); return book().names(); }
     public static String activeProfile() { return settings.activeProfiles.getOrDefault(scope,"Custom"); }
+    public static Tools tools() { return settings.tools; }
+    public static String tools(Tools value) { settings.tools=Objects.requireNonNull(value); if(!value.sortOnSwitch()) ClientTransfers.cancelRequestedSort(); return save()?"Saved automatically.":"Settings could not be saved."; }
+    private static QuickProfiles shortcuts() { var value=settings.shortcuts.computeIfAbsent(scope,k -> new QuickProfiles()); if(value.sync(book().names())) save(); return value; }
+    public static List<String> quickProfiles() { return shortcuts().names(); }
+    public static QuickProfiles.Badge badge(String name) { return shortcuts().badge(name); }
+    public static String badge(String name,QuickProfiles.Badge value) {
+        try { shortcuts().appearance(name,value); return save()?"Saved automatically.":"Settings could not be saved."; } catch(IllegalArgumentException ex) { return ex.getMessage(); }
+    }
+    public static String pin(String name,boolean value) {
+        try { shortcuts().pin(name,value); return save()?"Saved automatically.":"Settings could not be saved."; } catch(IllegalArgumentException ex) { return ex.getMessage(); }
+    }
     public static String manageProfile(String action,String selected,String name) {
         refresh();
+        if(ClientTransfers.busy()) return "Finish the current inventory move first.";
         try {
             switch(action) {
                 case "save" -> { book().save(name,new ProfileBook.Profile(inventoryFilter(),inventory())); settings.activeProfiles.put(scope,name); }
                 case "switch" -> {
+                    if(tools().sortOnSwitch() && !Minecraft.getInstance().player.containerMenu.getCarried().isEmpty()) return "Empty your cursor before switching profiles.";
                     var profile=book().get(selected);
                     if(profile==null) return "Select a saved profile.";
                     settings.inventories.put(scope,new HashMap<>(profile.slots())); settings.inventoryFilters.put(scope,profile.inventory()); settings.activeProfiles.put(scope,selected);
@@ -146,7 +170,8 @@ public final class ClientRules {
                 case "delete" -> { if(!book().delete(selected)) return "Select a saved profile."; if(selected.equals(activeProfile())) settings.activeProfiles.remove(scope); }
                 default -> { return "Unknown action."; }
             }
-            boolean saved=save(); refresh();
+            shortcuts(); boolean saved=save(); refresh();
+            if(action.equals("switch") && tools().sortOnSwitch()) ClientTransfers.requestSort();
             return saved ? switch(action) { case "save" -> "Profile saved."; case "switch" -> "Profile switched."; case "copy" -> "Profile copied."; default -> "Profile deleted; current rules kept."; } : "Active in memory; settings could not be saved.";
         } catch(IllegalArgumentException ex) { return ex.getMessage(); }
     }

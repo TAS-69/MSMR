@@ -20,8 +20,13 @@ public final class ItemPickerScreen extends InventoryPanelScreen {
     private int cols,capacity,page;
     private boolean selectedOnly;
     private String query="",notice="";
+    private final boolean single;
     public ItemPickerScreen(Screen parent,List<String> values,Consumer<List<String>> accept) {
+        this(parent,values,accept,false);
+    }
+    public ItemPickerScreen(Screen parent,List<String> values,Consumer<List<String>> accept,boolean single) {
         super(Component.literal("Choose items"),parent,314); chosen=new LinkedHashSet<>(values); this.accept=accept;
+        this.single=single;
         var all=new ArrayList<>(LookupCatalog.build());
         for(String token:chosen) if(all.stream().noneMatch(e -> e.token().equals(token))) all.add(new LookupCatalog.Entry(token,token,LookupCatalog.Kind.CHOSEN,List.of(),Set.of(),""));
         catalog=List.copyOf(all);
@@ -54,6 +59,7 @@ public final class ItemPickerScreen extends InventoryPanelScreen {
         prev.active=page>0; next.active=page+1<pages; selected.setMessage(Component.literal(selectedOnly?"All items":"Selected"));
     }
     private void toggle(LookupCatalog.Entry entry) {
+        if(single) { chosen.clear(); chosen.add(entry.token()); accept.accept(List.copyOf(chosen)); onClose(); return; }
         if(!chosen.remove(entry.token())) {
             if(chosen.size()>=64) { notice="64 entries: remove an item first."; return; }
             chosen.add(entry.token());

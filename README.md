@@ -6,9 +6,9 @@
 
 **Keep the loot. Leave the clutter.**
 
-Minecraft **1.21.1** · **Fabric & NeoForge** · **0.8.0**
+Minecraft **1.21.1** · **Fabric & NeoForge** · **0.9.0**
 
-**[⬇ Fabric](https://github.com/TAS-69/MSMR/releases/download/v0.8.0/msmr-fabric-1.21.1-0.8.0.jar) · [⬇ NeoForge](https://github.com/TAS-69/MSMR/releases/download/v0.8.0/msmr-neoforge-1.21.1-0.8.0.jar) · [📖 Wiki](https://github.com/TAS-69/MSMR/wiki)**
+**[⬇ Fabric](https://github.com/TAS-69/MSMR/releases/download/v0.9.0/msmr-fabric-1.21.1-0.9.0.jar) · [⬇ NeoForge](https://github.com/TAS-69/MSMR/releases/download/v0.9.0/msmr-neoforge-1.21.1-0.9.0.jar) · [📖 Wiki](https://github.com/TAS-69/MSMR/wiki)**
 
 </div>
 
@@ -48,6 +48,26 @@ Open **Advanced** for more control:
 - **Movement rules** — filter manual placement and supported shift-click transfers separately from pickups.
 
 ![Actual slot editor with a pickaxes-only hotbar rule](docs/images/slot-rules.png)
+
+## Mining pickaxe. Combat sword. One click.
+
+**Up to five coloured profile shortcuts, right beside your inventory.**
+
+Click **Mining** and your pickaxe goes into its saved slot. Click **Combat** and your sword takes its place. Missing the reserved item? MSMR clears that slot when there is room to move its contents safely.
+
+![Quick profile shortcuts beside the actual inventory](docs/images/quick-profiles.png)
+
+New profiles get their first letter and a random background colour. Prefer **Z**, a diamond sword, or your own colour? Customize each shortcut in **Advanced → Profiles**.
+
+## Chest says no? Transfer all listens.
+
+**↑ Inventory → chest. ↓ Chest → inventory. Only allowed items move.**
+
+The small arrows above an open chest respect its saved filters, your player filters, slot rules, and stack limits. Blocked items and anything that will not fit stay where they are.
+
+![Filter-aware transfer arrows above an open chest](docs/images/quick-transfers.png)
+
+**Your choice:** toggle each transfer direction in **Advanced → Transfers & sorting**. Toggle the quick panel and automatic arrangement in **Advanced → Profiles**. [Sorting & transfers →](https://github.com/TAS-69/MSMR/wiki/Sorting-and-Transfers)
 
 ## A different job for every chest
 
