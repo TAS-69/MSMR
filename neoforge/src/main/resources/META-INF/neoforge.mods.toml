@@ -1,0 +1,25 @@
+modLoader="javafml"
+loaderVersion="[4,)"
+license="CC0-1.0"
+[[mods]]
+modId="msmr"
+version="${version}"
+displayName="My Slots, My Rules"
+logoFile="assets/msmr/textures/gui/icon.png"
+authors="Walden"
+description='''Inventory filtering with optional server pickup support. Client-only use remains supported.'''
+displayTest="IGNORE_ALL_VERSION"
+[[mixins]]
+config="msmr.mixins.json"
+[[dependencies.msmr]]
+modId="neoforge"
+type="required"
+versionRange="[21.1.80,)"
+ordering="NONE"
+side="BOTH"
+[[dependencies.msmr]]
+modId="minecraft"
+type="required"
+versionRange="[1.21.1,1.21.2)"
+ordering="NONE"
+side="BOTH"

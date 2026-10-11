@@ -1,0 +1,18 @@
+# Gradle output and development instances
+.gradle/
+**/build/
+**/runs/
+**/run/
+logs/
+dist/
+
+# Local editor and workspace files
+.idea/
+.vscode/
+*.iml
+*.reference
+*.log
+.DS_Store
+Thumbs.db
+.env
+.env.*
