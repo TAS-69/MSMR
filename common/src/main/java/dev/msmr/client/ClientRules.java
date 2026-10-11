@@ -2,6 +2,8 @@ package dev.msmr.client;
 
 import dev.msmr.Rule;
 import dev.msmr.ProfileBook;
+import dev.msmr.ChestAddress;
+import dev.msmr.ChestProfile;
 import com.google.gson.Gson;
 import java.nio.file.*;
 import java.util.*;
@@ -15,6 +17,7 @@ public final class ClientRules {
     public static Rule clipboard = Rule.OPEN;
     private static final Map<Integer,Rule> containerRules = new HashMap<>();
     private static AbstractContainerMenu attached;
+    private static ChestTracker.Target chest;
     private static String scope = "";
     private static Settings settings = new Settings();
     private static boolean loaded;
@@ -25,6 +28,7 @@ public final class ClientRules {
         public Map<String,Rule> inventoryFilters = new HashMap<>();
         public Map<String,ProfileBook> books = new HashMap<>();
         public Map<String,String> activeProfiles = new HashMap<>();
+        public Map<String,Map<String,ChestProfile>> chests = new HashMap<>();
     }
     public static void init() {
         if (loaded) return;
@@ -35,6 +39,7 @@ public final class ClientRules {
             if(settings.inventoryFilters==null) settings.inventoryFilters=new HashMap<>();
             if(settings.books==null) settings.books=new HashMap<>();
             if(settings.activeProfiles==null) settings.activeProfiles=new HashMap<>();
+            if(settings.chests==null) settings.chests=new HashMap<>();
             validate(settings);
             for(var old:settings.profiles.entrySet()) {
                 int divider=old.getKey().lastIndexOf('/');
@@ -65,6 +70,15 @@ public final class ClientRules {
             }
         }
         for(String name:data.activeProfiles.values()) ProfileBook.validate(name);
+        Objects.requireNonNull(data.chests);
+        for(var storage:data.chests.values()) {
+            Objects.requireNonNull(storage);
+            for(var entry:storage.entrySet()) {
+                ChestAddress.parse(entry.getKey());
+                var profile=Objects.requireNonNull(entry.getValue());
+                new ChestProfile(profile.filter(),profile.slots());
+            }
+        }
     }
     private static void validateSlots(Map<Integer,Rule> slots) {
         Objects.requireNonNull(slots);
@@ -74,21 +88,25 @@ public final class ClientRules {
         }
     }
     private static Map<Integer,Rule> inventory() { return settings.inventories.computeIfAbsent(scope,k -> new HashMap<>()); }
-    public static void refresh() {
-        Minecraft mc=Minecraft.getInstance();
-        if (mc.player==null) { attached=null; rules.clear(); dev.msmr.ServerPickupRules.clearLocal(); ClientCapabilities.update(Rule.OPEN,Map.of()); return; }
-        if (file==null) init();
+    private static String currentScope(Minecraft mc) {
         String world=mc.getCurrentServer()!=null ? "server/"+mc.getCurrentServer().ip
             : mc.getSingleplayerServer()!=null ? "world/"+mc.getSingleplayerServer().getWorldPath(net.minecraft.world.level.storage.LevelResource.ROOT).toAbsolutePath().normalize()
             : "local";
-        String next=world+"/"+mc.player.getUUID();
+        return world+"/"+mc.player.getUUID();
+    }
+    public static void refresh() {
+        Minecraft mc=Minecraft.getInstance();
+        if (mc.player==null) { attached=null; chest=null; ChestTracker.clear(); rules.clear(); dev.msmr.ServerPickupRules.clearLocal(); ClientCapabilities.update(Rule.OPEN,Map.of()); return; }
+        if (file==null) init();
+        String next=currentScope(mc);
         if (!next.equals(scope) || attached!=mc.player.containerMenu) { containerRules.clear(); attached=mc.player.containerMenu; scope=next; }
+        chest=ChestTracker.current(attached);
         rules.clear();
         for (Slot slot:attached.slots) {
             if (slot.container==mc.player.getInventory()) {
                 int i=slot.getContainerSlot();
                 if(i>=0 && i<36) rules.put(slot.index,inventory().getOrDefault(i,Rule.OPEN));
-            } else if (supported(attached)) rules.put(slot.index,containerRules.getOrDefault(slot.index,Rule.OPEN));
+            } else if (supported(attached)) rules.put(slot.index,chest!=null?chestProfile(chest.address(slot.getContainerSlot())).slot(slot.getContainerSlot()%27):containerRules.getOrDefault(slot.index,Rule.OPEN));
         }
         dev.msmr.ServerPickupRules.publishLocal(mc.getSingleplayerServer(),mc.player.getUUID(),inventoryFilter(),inventory());
         ClientCapabilities.update(inventoryFilter(),inventory());
@@ -100,11 +118,12 @@ public final class ClientRules {
     public static Rule inventoryFilter() { return settings.inventoryFilters.getOrDefault(scope,Rule.OPEN); }
     public static Rule inventoryFilter(Slot slot) {
         var player=Minecraft.getInstance().player;
-        return player!=null && slot.container==player.getInventory() && slot.getContainerSlot()>=0 && slot.getContainerSlot()<36 ? inventoryFilter() : Rule.OPEN;
+        if(player!=null && slot.container==player.getInventory() && slot.getContainerSlot()>=0 && slot.getContainerSlot()<36) return inventoryFilter();
+        return chest!=null && slot.index>=0 && slot.index<chest.blocks().size()*27 ? chestProfile(chest.address(slot.getContainerSlot())).filter() : Rule.OPEN;
     }
     public static Rule moveRule(Slot slot) { return rule(slot).forMoving(); }
     public static Rule moveInventoryFilter(Slot slot) { return inventoryFilter(slot).forMoving(); }
-    public static boolean hasFilters() { return !inventoryFilter().forMoving().unrestricted() || rules.values().stream().anyMatch(r -> !r.forMoving().unrestricted()); }
+    public static boolean hasFilters() { return !inventoryFilter().forMoving().unrestricted() || rules.values().stream().anyMatch(r -> !r.forMoving().unrestricted()) || chest!=null && chest.blocks().stream().anyMatch(a -> !chestProfile(a).filter().forMoving().unrestricted()); }
     public static boolean accepts(Slot slot,net.minecraft.world.item.ItemStack stack) { return moveRule(slot).accepts(stack) && moveInventoryFilter(slot).accepts(stack); }
     public static String setInventoryFilter(Rule rule) {
         refresh(); settings.inventoryFilters.put(scope,rule); settings.activeProfiles.remove(scope); refresh();
@@ -131,12 +150,44 @@ public final class ClientRules {
             return saved ? switch(action) { case "save" -> "Profile saved."; case "switch" -> "Profile switched."; case "copy" -> "Profile copied."; default -> "Profile deleted; current rules kept."; } : "Active in memory; settings could not be saved.";
         } catch(IllegalArgumentException ex) { return ex.getMessage(); }
     }
-    public static void edit(int index,Rule rule) {
-        refresh(); if (attached==null || !rules.containsKey(index)) return;
+    public static String edit(int index,Rule rule) {
+        refresh(); if (attached==null || !rules.containsKey(index)) return "Slot is no longer available.";
         Slot slot=attached.getSlot(index);
-        if (slot.container instanceof Inventory) { inventory().put(slot.getContainerSlot(),rule); settings.activeProfiles.remove(scope); save(); }
+        boolean saved=true;
+        if (slot.container instanceof Inventory) { inventory().put(slot.getContainerSlot(),rule); settings.activeProfiles.remove(scope); saved=save(); }
+        else if(chest!=null) { putChest(chest.address(slot.getContainerSlot()),chestProfile(chest.address(slot.getContainerSlot())).withSlot(slot.getContainerSlot()%27,rule)); saved=save(); }
         else containerRules.put(index,rule);
         refresh();
+        return saved?"Saved automatically.":"Applied in memory; settings could not be saved.";
+    }
+    public static boolean hasChest() { return chest!=null; }
+    public static boolean chestSlot(Slot slot) { return chest!=null && slot.container!=Minecraft.getInstance().player.getInventory(); }
+    private static Map<String,ChestProfile> storage() { return settings.chests.computeIfAbsent(scope,k -> new HashMap<>()); }
+    private static ChestProfile chestProfile(ChestAddress address) { return storage().getOrDefault(address.key(),ChestProfile.EMPTY); }
+    private static void putChest(ChestAddress address,ChestProfile profile) {
+        if(profile.empty()) storage().remove(address.key()); else storage().put(address.key(),profile);
+    }
+    public static Rule chestFilter() { return chest==null?Rule.OPEN:chestProfile(chest.blocks().getFirst()).filter(); }
+    public static boolean mixedChestFilters() { return chest!=null && chest.blocks().stream().anyMatch(a -> !chestProfile(a).filter().equals(chestFilter())); }
+    public static String chestDescription() { return chest==null?"":chest.blocks().size()==2?"Saved to both chest halves.":"Saved to this storage block."; }
+    public static String setChestFilter(Rule rule) {
+        refresh(); if(chest==null) return "Chest is no longer open.";
+        for(var address:chest.blocks()) putChest(address,chestProfile(address).withFilter(rule));
+        refresh(); return save()?"Saved automatically.":"Applied in memory; settings could not be saved.";
+    }
+    public static void resetChest() {
+        refresh(); if(chest==null) return;
+        chest.blocks().forEach(address -> storage().remove(address.key())); save(); refresh();
+    }
+    public static void storageChanged(net.minecraft.client.multiplayer.ClientLevel level,net.minecraft.core.BlockPos position,net.minecraft.world.level.block.state.BlockState state) {
+        var mc=Minecraft.getInstance();
+        if(!loaded || level!=mc.level || mc.player==null) return;
+        var profiles=settings.chests.get(currentScope(mc));
+        if(profiles==null || profiles.isEmpty()) return;
+        String prefix=level.dimension().location()+"|"+position.getX()+","+position.getY()+","+position.getZ()+"|";
+        String current=prefix+net.minecraft.core.registries.BuiltInRegistries.BLOCK.getKey(state.getBlock());
+        boolean removed=profiles.keySet().removeIf(key -> key.startsWith(prefix) && !key.equals(current));
+        if(removed) save();
     }
     private static boolean save() {
         if (!loaded) return false;

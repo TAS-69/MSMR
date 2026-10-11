@@ -73,7 +73,7 @@ public final class RuleScreen extends InventoryPanelScreen {
         try {
             Rule rule = draft();
             if(rule.equals(ClientRules.rules.getOrDefault(slot.index,Rule.OPEN))) { error="Saved automatically."; return; }
-            ClientRules.clipboard = rule; ClientRules.edit(slot.index, rule); error="Saved automatically.";
+            ClientRules.clipboard = rule; error=ClientRules.edit(slot.index, rule);
         } catch (IllegalArgumentException ex) { error = "Check IDs / #tags and limit (0-99)."; }
     }
     private Rule draft() {
@@ -83,10 +83,12 @@ public final class RuleScreen extends InventoryPanelScreen {
     @Override public boolean isPauseScreen() { return false; }
     @Override public void render(GuiGraphics g, int mx, int my, float delta) {
         if(pickupButton!=null) {
-            boolean available=ClientCapabilities.pickupsAvailable();
+            boolean storage=ClientRules.chestSlot(slot);
+            boolean available=!storage && ClientCapabilities.pickupsAvailable();
             if(pickupButton.active!=available) pickupButton.setTooltip(Tooltip.create(Component.literal(ClientCapabilities.pickupExplanation())));
             pickupButton.active=available;
-            pickupButton.setMessage(Component.literal(available?(pickups?"[x] ":"[ ] ")+"Pickups":"Pickups unavailable"));
+            pickupButton.setMessage(Component.literal(storage?"Chest slot":available?(pickups?"[x] ":"[ ] ")+"Pickups":"Pickups unavailable"));
+            if(storage) pickupButton.setTooltip(Tooltip.create(Component.literal("Saved to this chest automatically. This slot filters inventory moves.")));
         }
         renderPanel(g,mx,my,delta);
         int x=panelX,y=panelY;

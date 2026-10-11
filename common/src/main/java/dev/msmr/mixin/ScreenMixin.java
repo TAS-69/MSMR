@@ -35,9 +35,10 @@ public abstract class ScreenMixin extends Screen implements InventoryAnchor {
         ClientRules.refresh();
         msmr$consumed=false;
         msmr$tabs.clear();
-        msmr$button=msmr$tab(msmr$editing?"Done":"Pickups","Pickup filters: choose which drops to collect",b -> {
+        boolean chest=ClientRules.hasChest();
+        msmr$button=msmr$tab(msmr$editing?"Done":chest?"Chest":"Pickups",chest?"Chest filters: saved automatically to this chest":"Pickup filters: choose which drops to collect",b -> {
             if(msmr$editing) msmr$editSlots(false);
-            else if(!ClientTransfers.busy()) minecraft.setScreen(new PickupScreen(this));
+            else if(!ClientTransfers.busy()) minecraft.setScreen(new PickupScreen(this,ClientRules.hasChest()));
         });
         msmr$tab("Advanced","Advanced tools: profiles, slot rules and inventory moves",b -> {
             if(!ClientTransfers.busy()) minecraft.setScreen(new AdvancedScreen(this));
@@ -45,7 +46,7 @@ public abstract class ScreenMixin extends Screen implements InventoryAnchor {
     }
     @Override public void msmr$editSlots(boolean editing) {
         msmr$editing=editing;
-        if(msmr$button!=null) msmr$button.setMessage(Component.literal(editing?"Done":"Pickups"));
+        if(msmr$button!=null) msmr$button.setMessage(Component.literal(editing?"Done":ClientRules.hasChest()?"Chest":"Pickups"));
     }
     @Unique private Button msmr$tab(String text,String tip,Button.OnPress press) {
         Button button=new Button(0,0,28,22,Component.literal(text),press,supplier -> supplier.get()) {
@@ -54,7 +55,7 @@ public abstract class ScreenMixin extends Screen implements InventoryAnchor {
                 g.fill(x,y,x+28,y+22,isHoveredOrFocused()?0xFFFFFFFF:0xFF555555);
                 g.fill(x+1,y+1,x+27,y+21,0xFFC6C6C6);
                 if(getMessage().getString().equals("Done")) g.drawString(Minecraft.getInstance().font,"Done",x+2,y+7,0x303030,false);
-                else if(getMessage().getString().equals("Pickups")) g.blit(ModIcon.texture(),x+6,y+3,0,0,16,16,16,16);
+                else if(getMessage().getString().equals("Pickups") || getMessage().getString().equals("Chest")) g.blit(ModIcon.texture(),x+6,y+3,0,0,16,16,16,16);
                 else {
                     // Settings sliders, with no font-dependent symbol glyphs.
                     for(int i=0;i<3;i++) { g.fill(x+5,y+5+i*5,x+23,y+7+i*5,0xFF404040); int knob=x+8+(i%2)*9; g.fill(knob,y+3+i*5,knob+3,y+9+i*5,0xFF404040); }
@@ -116,7 +117,7 @@ public abstract class ScreenMixin extends Screen implements InventoryAnchor {
     private void msmr$overlay(GuiGraphics g,int mx,int my,float delta,CallbackInfo ci) {
         ClientRules.refresh();
         var screen = (AbstractContainerScreen<?>)(Object)this;
-        Rule wide=ClientRules.inventoryFilter();
+        Rule wide=ClientRules.hasChest()?ClientRules.chestFilter():ClientRules.inventoryFilter();
         if(!wide.unrestricted()) g.fill(msmr$tabLeft()+2,Math.max(0,Math.min(topPos+6,height-48))+2,msmr$tabLeft()+4,Math.max(0,Math.min(topPos+6,height-48))+20,0xFF55DD77);
         if (msmr$editing) {
             g.drawCenteredString(Minecraft.getInstance().font,"MSMR: click a slot to edit; Done to move items",width/2,height-12,0xFFDD77);

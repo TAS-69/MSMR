@@ -6,9 +6,9 @@
 
 **Keep the loot. Leave the clutter.**
 
-Minecraft **1.21.1** · **Fabric & NeoForge** · First public release **0.7.0**
+Minecraft **1.21.1** · **Fabric & NeoForge** · **0.8.0**
 
-**[⬇ Fabric](https://github.com/TAS-69/MSMR/releases/download/v0.7.0/msmr-fabric-1.21.1-0.7.0.jar) · [⬇ NeoForge](https://github.com/TAS-69/MSMR/releases/download/v0.7.0/msmr-neoforge-1.21.1-0.7.0.jar) · [📖 Wiki](https://github.com/TAS-69/MSMR/wiki)**
+**[⬇ Fabric](https://github.com/TAS-69/MSMR/releases/download/v0.8.0/msmr-fabric-1.21.1-0.8.0.jar) · [⬇ NeoForge](https://github.com/TAS-69/MSMR/releases/download/v0.8.0/msmr-neoforge-1.21.1-0.8.0.jar) · [📖 Wiki](https://github.com/TAS-69/MSMR/wiki)**
 
 </div>
 
@@ -49,7 +49,17 @@ Open **Advanced** for more control:
 
 ![Actual slot editor with a pickaxes-only hotbar rule](docs/images/slot-rules.png)
 
-Player rules persist per world/server. Supported container rules last while the container is open.
+## A different job for every chest
+
+**Building blocks here. Farming supplies there. Each chest remembers its own rules.**
+
+Open a chest → click the **MSMR tab** → choose what belongs. Whole-chest and slot filters save automatically, separately from your player inventory.
+
+![Chest-specific filter with automatic saving](docs/images/chest-filters.png)
+
+**Close it. Reconnect. Restart. Your chest setup stays put.** Double chests, trapped chests, and barrels are supported too. [Chest guide →](https://github.com/TAS-69/MSMR/wiki/Chest-Filters)
+
+Player and chest rules persist per world/server. Other supported container rules last while the container is open.
 
 ## Install & play
 

@@ -14,12 +14,15 @@ public final class InventoryFilterScreen extends InventoryPanelScreen {
     private EditBox entries,name;
     private String selected="",status="";
     private final boolean profiles;
+    private final boolean chest;
     private boolean advanced, pickups=true, moving=true, updating;
     private List<LookupCatalog.Entry> catalog=List.of();
     public InventoryFilterScreen(Screen parent) { this(parent,false); }
-    public InventoryFilterScreen(Screen parent,boolean profiles) { super(Component.literal(profiles?"Inventory profiles":"Whole inventory"),parent,218); this.profiles=profiles; }
+    public InventoryFilterScreen(Screen parent,boolean profiles) { super(Component.literal(profiles?"Inventory profiles":ClientRules.hasChest()?"Whole chest":"Whole inventory"),parent,218); this.profiles=profiles; this.chest=!profiles && ClientRules.hasChest(); }
+    private Rule currentRule() { return chest?ClientRules.chestFilter():ClientRules.inventoryFilter(); }
+    private String setRule(Rule rule) { return chest?ClientRules.setChestFilter(rule):ClientRules.setInventoryFilter(rule); }
     @Override protected void init() {
-        ClientRules.refresh(); Rule rule=ClientRules.inventoryFilter(); if(entries==null) { mode=rule.mode(); pickups=rule.pickups(); moving=rule.moving(); }
+        ClientRules.refresh(); Rule rule=currentRule(); if(entries==null) { mode=rule.mode(); pickups=rule.pickups(); moving=rule.moving(); }
         String previousEntries=entries==null?String.join(",",rule.entries()):entries.getValue();
         String previousName=name==null?null:name.getValue();
         List<String> names=ClientRules.profileNames(); if(!names.contains(selected)) selected=names.isEmpty()?"":names.getFirst();
@@ -42,8 +45,8 @@ public final class InventoryFilterScreen extends InventoryPanelScreen {
         }).bounds(x,y+164,145,20).build());
 
         addRenderableWidget(Button.builder(Component.literal("Reset"),b -> {
-            mode=Rule.Mode.ALL; pickups=true; moving=true; entries.setValue(""); status=ClientRules.setInventoryFilter(Rule.OPEN); rebuildWidgets();
-        }).bounds(x+155,y+164,145,20).tooltip(Tooltip.create(Component.literal("Reset the whole-inventory rule; individual slot rules remain."))).build());
+            mode=Rule.Mode.ALL; pickups=true; moving=true; entries.setValue(""); status=setRule(Rule.OPEN); rebuildWidgets();
+        }).bounds(x+155,y+164,145,20).tooltip(Tooltip.create(Component.literal(chest?"Reset the whole-chest rule; individual slot rules remain.":"Reset the whole-inventory rule; individual slot rules remain."))).build());
         pickupButton=addRenderableWidget(Button.builder(Component.literal((pickups?"[x] ":"[ ] ")+"Pickups"),b -> { pickups=!pickups; apply(); rebuildWidgets(); }).bounds(x,y+74,145,18).tooltip(Tooltip.create(Component.literal(ClientCapabilities.pickupExplanation()))).build());
         pickupButton.active=ClientCapabilities.pickupsAvailable();
         addRenderableWidget(Button.builder(Component.literal((moving?"[x] ":"[ ] ")+"Inventory moves"),b -> { moving=!moving; apply(); rebuildWidgets(); }).bounds(x+155,y+74,145,18).build());
@@ -83,7 +86,7 @@ public final class InventoryFilterScreen extends InventoryPanelScreen {
     private Rule draft() { return new Rule(mode,Arrays.stream(entries.getValue().split(",")).map(String::trim).filter(s -> !s.isEmpty()).toList(),0,pickups,moving); }
     private void apply() {
         if(profiles || entries==null) return;
-        try { Rule value=draft(); status=value.equals(ClientRules.inventoryFilter())?"Saved automatically.":ClientRules.setInventoryFilter(value); }
+        try { Rule value=draft(); status=value.equals(currentRule())?"Saved automatically.":setRule(value); }
         catch(IllegalArgumentException ex) { status="Invalid ID: last valid filter stays active."; }
     }
     private void profile(String action) {
@@ -102,10 +105,11 @@ public final class InventoryFilterScreen extends InventoryPanelScreen {
     @Override public boolean isPauseScreen() { return false; }
     @Override public void render(GuiGraphics g,int mx,int my,float delta) {
         if(pickupButton!=null) {
-            boolean available=ClientCapabilities.pickupsAvailable();
+            boolean available=!chest && ClientCapabilities.pickupsAvailable();
             if(pickupButton.active!=available) pickupButton.setTooltip(Tooltip.create(Component.literal(ClientCapabilities.pickupExplanation())));
             pickupButton.active=available;
-            pickupButton.setMessage(Component.literal(available?(pickups?"[x] ":"[ ] ")+"Pickups":"Pickups unavailable"));
+            pickupButton.setMessage(Component.literal(chest?"Chest storage":available?(pickups?"[x] ":"[ ] ")+"Pickups":"Pickups unavailable"));
+            if(chest) pickupButton.setTooltip(Tooltip.create(Component.literal(ClientRules.chestDescription()+" Ground pickups use your player rules.")));
         }
         renderPanel(g,mx,my,delta); int x=panelX,y=panelY;
         g.blit(ModIcon.texture(),x,y,0,0,12,12,12,12); g.drawString(font,title,x+17,y+2,0x404040,false);
@@ -114,13 +118,13 @@ public final class InventoryFilterScreen extends InventoryPanelScreen {
             g.drawString(font,"Profile name / new name for Copy:",x,y+66,0x404040,false);
             g.drawString(font,"Save includes applied inventory + slot rules.",x,y+142,0x505050,false);
         } else {
-            Rule applied=ClientRules.inventoryFilter();
+            Rule applied=currentRule();
             g.drawString(font,"Active: "+RuleVisuals.label(applied.mode()),x+17,y+14,0x303030,false);
 
             if(!advanced) RuleVisuals.entries(g,font,x,y+96,tokens(),catalog);
             if(mode==Rule.Mode.ALL && !tokens().isEmpty()) status="Allow everything ignores selected items.";
         }
-        g.drawString(font,font.plainSubstrByWidth(ClientCapabilities.error().isEmpty()?status:ClientCapabilities.error(),300),x,y+187,0x883300,false);
+        g.drawString(font,font.plainSubstrByWidth(chest || ClientCapabilities.error().isEmpty()?status:ClientCapabilities.error(),300),x,y+187,0x883300,false);
         super.render(g,mx,my,delta);
         if(!profiles && !advanced) RuleVisuals.tooltip(g,font,x,y+96,mx,my,tokens(),catalog);
     }

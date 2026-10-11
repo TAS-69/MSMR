@@ -5,6 +5,6 @@
   "refmap": "msmr.refmap.json",
   "compatibilityLevel": "JAVA_21",
   "mixins": ["ServerPickupMixin"],
-  "client": ["ScreenMixin", "ClientClickMixin", "ClientTickMixin", "InventoryScreenMixin", "RecipeBookVisibility"],
+  "client": ["ScreenMixin", "ClientClickMixin", "ClientTickMixin", "InventoryScreenMixin", "RecipeBookVisibility", "ChestInteractionMixin", "ChestMenuMixin", "ChestBlockUpdateMixin", "ChestScreenMixin"],
   "injectors": {"defaultRequire": 1}
 }
