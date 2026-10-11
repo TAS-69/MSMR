@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="common/src/main/resources/assets/msmr/textures/gui/icon.png" alt="MSMR" width="80">
+<img src="common/src/main/resources/assets/msmr/textures/gui/icon.png" alt="MSMR" width="256">
 
 # My Slots, My Rules
 
