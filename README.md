@@ -26,7 +26,7 @@ You throw out sticks or rotten flesh, then walk straight back into them. **Inven
 **②** Click **+ Add items** → select their pictures.<br>
 **③** Leave the mode on **Block**. Your filter is already active.
 
-**No Apply button. Changes save automatically.**
+**Changes save automatically.**
 
 | − **Block** | ✓ **Only** | + **All** | × **None** |
 | :---: | :---: | :---: | :---: |
@@ -49,7 +49,7 @@ Open **Advanced** for more control:
 
 ![Actual slot editor with a pickaxes-only hotbar rule](docs/images/slot-rules.png)
 
-Player rules persist per world/server. Supported container rules last while the container is open. **Hopper automation and general inventory sorting are outside this build.**
+Player rules persist per world/server. Supported container rules last while the container is open.
 
 ## Install & play
 
