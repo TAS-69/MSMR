@@ -8,7 +8,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.world.inventory.*;
 import net.minecraft.world.item.ItemStack;
 
-/** Uses only ordinary vanilla clicks, checking predicted state before each step. */
+/** Uses acknowledged server operations when available, otherwise guarded vanilla clicks. */
 public final class ClientTransfers {
     private record Action(int slot,int button,ItemStack cursor,ItemStack before) {}
     private static final Deque<Action> pending=new ArrayDeque<>();
@@ -18,7 +18,7 @@ public final class ClientTransfers {
     private enum Batch { RESERVED, TO_CHEST, FROM_CHEST }
     private static Batch batch=Batch.RESERVED;
     public static boolean emitting;
-    public static boolean busy() { return !pending.isEmpty() || !fillSources.isEmpty(); }
+    public static boolean busy() { return !pending.isEmpty() || !fillSources.isEmpty() || ClientOperations.busy() || ClientChestSync.closing(); }
     private static void message(String text) { var p=Minecraft.getInstance().player; if(p!=null) p.displayClientMessage(Component.literal(text),true); }
     public static boolean quickMove(int source) {
         var mc=Minecraft.getInstance(); var menu=mc.player.containerMenu;
@@ -38,12 +38,14 @@ public final class ClientTransfers {
         }
         boolean filtered=targets.stream().anyMatch(s -> !ClientRules.moveRule(s).unrestricted() || !ClientRules.moveInventoryFilter(s).unrestricted());
         if(!filtered) return false;
+        if((menu==mc.player.inventoryMenu || menu instanceof ChestMenu) && ClientOperations.start("quick_move",source)) return true;
         if(!chest && menu!=mc.player.inventoryMenu) { message("MSMR: use manual clicks in this menu."); return true; }
         plan(menu,from,targets); return true;
     }
     public static void fillReserved() {
         var mc=Minecraft.getInstance();
         if(mc.player==null || busy() || !mc.player.containerMenu.getCarried().isEmpty()) return;
+        if(ClientOperations.start("reserved",-1)) return;
         ClientRules.refresh(); active=mc.player.containerMenu; batch=Batch.RESERVED;
         for(Slot slot:active.slots) if(slot.container==mc.player.getInventory() && slot.getContainerSlot()<36
             && !slot.getItem().isEmpty() && !ClientRules.moveRule(slot).preferred(slot.getItem())) fillSources.add(slot.index);
@@ -55,6 +57,7 @@ public final class ClientTransfers {
         var mc=Minecraft.getInstance();
         if(mc.player==null || busy() || !mc.player.containerMenu.getCarried().isEmpty()) { message("Empty your cursor and finish the current move first."); return; }
         ClientRules.refresh();
+        if(ClientOperations.start("sort",-1)) return;
         var menu=mc.player.containerMenu;
         List<Slot> slots=menu.slots.stream().filter(s -> s.container==mc.player.getInventory() && s.getContainerSlot()>=0 && s.getContainerSlot()<36).sorted(Comparator.comparingInt(Slot::getContainerSlot)).toList();
         if(slots.size()!=36) { message("Open your inventory or a supported chest to arrange items."); return; }
@@ -72,6 +75,7 @@ public final class ClientTransfers {
         var mc=Minecraft.getInstance();
         if(mc.player==null || busy() || !(mc.player.containerMenu instanceof ChestMenu) || !mc.player.containerMenu.getCarried().isEmpty()) return;
         if(toChest?!ClientRules.tools().transferTo():!ClientRules.tools().transferFrom()) return;
+        if(ClientOperations.start(toChest?"to_chest":"from_chest",-1)) return;
         ClientRules.refresh(); active=mc.player.containerMenu; batch=toChest?Batch.TO_CHEST:Batch.FROM_CHEST;
         for(Slot slot:active.slots) {
             boolean player=slot.container==mc.player.getInventory() && slot.getContainerSlot()>=0 && slot.getContainerSlot()<36;

@@ -93,7 +93,7 @@ public final class PickupScreen extends InventoryPanelScreen {
             g.drawString(font,chest?"Use + Add items to choose what belongs.":"Use + Add items to choose your drops.",x+8,y+106,0x505050,false);
         }
         if(!rule().entries().isEmpty()) g.drawString(font,rule().entries().size()+" selected | "+(page+1)+"/"+Math.max(1,(rule().entries().size()+23)/24)+" | Click to remove",x+28,y+136,0x404040,false);
-        String status=chest?(!enabled()?"This chest filter is paused.":notice.isEmpty()?ClientRules.chestDescription():notice):!available?"Server support needed - hover Unavailable.":!rule().pickups()?"This pickup filter is paused.":!ClientCapabilities.error().isEmpty()?ClientCapabilities.error():notice.isEmpty()?"Changes save automatically.":notice;
+        String status=chest?ClientRules.chestDescription():!available?"Server support needed - hover Unavailable.":!rule().pickups()?"This pickup filter is paused.":!ClientCapabilities.error().isEmpty()?ClientCapabilities.error():ClientCapabilities.available() && !ClientCapabilities.synced()?"Syncing pickup filters with the server...":notice.isEmpty()?"Changes save automatically.":notice;
         g.drawString(font,font.plainSubstrByWidth(status,300),x,y+180,available?0x404040:0x803B18,false);
         super.render(g,mx,my,delta);
     }

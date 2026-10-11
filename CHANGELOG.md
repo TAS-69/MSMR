@@ -1,5 +1,15 @@
 # Releases
 
+## 0.10.0 · Shared chests. Safer moves.
+
+- **Smaller shortcuts:** 18 × 18 buttons, compact spacing, and smaller item pictures.
+- **Shared chest enforcement:** rules persist with normal/trapped chests and barrels on supported servers, including double-chest halves. Hoppers, droppers, and other players must respect insertion rules and caps.
+- **Inventory API support:** Fabric transfer transactions and NeoForge inventory wrappers honor filtered insertion and stack limits, including simulation and rollback.
+- **Server-handled actions:** sorting, quick transfers, reserved-slot filling, and filtered quick-move use live server inventories when support is available.
+- **Safe synchronization:** versioned handshakes, acknowledgements, bounded retries, duplicate-request protection, menu-session checks, stale-state rejection, and conflict detection for shared edits.
+- **Filter ownership:** the first editor owns shared chest rules. The owner and server operators may change them; other players can read the setup and take items out.
+- **Optional support:** ordinary servers keep client inventory tools. Singleplayer needs no API; remote Fabric networking requires Fabric API on both ends.
+
 ## 0.9.0 · Switch gear. Move the right stuff.
 
 - **Transfer all:** arrows above a chest move allowed items in either direction, respecting destination profiles, slot rules, capacity, and stack caps.

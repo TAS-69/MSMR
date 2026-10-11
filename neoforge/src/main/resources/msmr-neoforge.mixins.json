@@ -1,0 +1,7 @@
+{
+  "required": true,
+  "package": "dev.msmr.neoforge.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "mixins": ["NeoStorageMixin"],
+  "injectors": {"defaultRequire": 1}
+}

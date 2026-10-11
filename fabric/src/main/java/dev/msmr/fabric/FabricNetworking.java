@@ -8,7 +8,7 @@ public final class FabricNetworking {
     public static void init() {
         PayloadTypeRegistry.playC2S().register(FilterPayload.TYPE,FilterPayload.CODEC);
         PayloadTypeRegistry.playS2C().register(FilterPayload.TYPE,FilterPayload.CODEC);
-        ServerPlayNetworking.registerGlobalReceiver(FilterPayload.TYPE,(payload,context) ->
-            ServerPickupRules.receive(context.player(),payload,response -> ServerPlayNetworking.send(context.player(),response)));
+        ServerPlayNetworking.registerGlobalReceiver(FilterPayload.TYPE,(payload,context) -> context.server().execute(() ->
+            ServerPickupRules.receive(context.player(),payload,response -> ServerPlayNetworking.send(context.player(),response))));
     }
 }

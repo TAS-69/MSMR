@@ -50,6 +50,8 @@ public final class AdvancedScreen extends InventoryPanelScreen {
             String[] hints={"Items, tags, categories and stack limits","Switch setups and customize the quick panel","Chest transfers and inventory arrangement"};
             for(int i=0;i<hints.length;i++) g.drawString(font,hints[i],x,y+57+i*36,0x505050,false);
         }
-        g.drawString(font,font.plainSubstrByWidth(status,300),x,y+184,0x803B18,false); super.render(g,mx,my,delta);
+        String footer=status;
+        if(footer.isEmpty() && page==Page.TRANSFERS) footer=ClientCapabilities.available()?ClientCapabilities.synced()?"Server handles moves; shared chest rules active.":"Waiting for the server to confirm filters.":"Local tools. Server support enables automation.";
+        g.drawString(font,font.plainSubstrByWidth(footer,300),x,y+184,0x803B18,false); super.render(g,mx,my,delta);
     }
 }

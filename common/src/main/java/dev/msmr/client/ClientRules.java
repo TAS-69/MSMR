@@ -35,6 +35,7 @@ public final class ClientRules {
         public Map<String,String> activeProfiles = new HashMap<>();
         public Map<String,Map<String,ChestProfile>> chests = new HashMap<>();
         public Map<String,QuickProfiles> shortcuts = new HashMap<>();
+        public Map<String,Set<String>> sharedChests = new HashMap<>();
         public Tools tools=Tools.DEFAULT;
     }
     public static void init() {
@@ -48,6 +49,7 @@ public final class ClientRules {
             if(settings.activeProfiles==null) settings.activeProfiles=new HashMap<>();
             if(settings.chests==null) settings.chests=new HashMap<>();
             if(settings.shortcuts==null) settings.shortcuts=new HashMap<>();
+            if(settings.sharedChests==null) settings.sharedChests=new HashMap<>();
             if(settings.tools==null) settings.tools=Tools.DEFAULT;
             validate(settings);
             for(var old:settings.profiles.entrySet()) {
@@ -82,6 +84,7 @@ public final class ClientRules {
         Objects.requireNonNull(data.chests);
         Objects.requireNonNull(data.tools); Objects.requireNonNull(data.shortcuts);
         for(var shortcuts:data.shortcuts.values()) Objects.requireNonNull(shortcuts).validate();
+        Objects.requireNonNull(data.sharedChests); for(var known:data.sharedChests.values()) { Objects.requireNonNull(known); known.forEach(ChestAddress::parse); }
         for(var storage:data.chests.values()) {
             Objects.requireNonNull(storage);
             for(var entry:storage.entrySet()) {
@@ -180,7 +183,7 @@ public final class ClientRules {
         Slot slot=attached.getSlot(index);
         boolean saved=true;
         if (slot.container instanceof Inventory) { inventory().put(slot.getContainerSlot(),rule); settings.activeProfiles.remove(scope); saved=save(); }
-        else if(chest!=null) { putChest(chest.address(slot.getContainerSlot()),chestProfile(chest.address(slot.getContainerSlot())).withSlot(slot.getContainerSlot()%27,rule)); saved=save(); }
+        else if(chest!=null) { if(!ClientChestSync.canEdit()) return "Wait for shared rules, or ask the filter owner to edit them."; putChest(chest.address(slot.getContainerSlot()),chestProfile(chest.address(slot.getContainerSlot())).withSlot(slot.getContainerSlot()%27,rule)); saved=save(); ClientChestSync.edited(); }
         else containerRules.put(index,rule);
         refresh();
         return saved?"Saved automatically.":"Applied in memory; settings could not be saved.";
@@ -194,15 +197,21 @@ public final class ClientRules {
     }
     public static Rule chestFilter() { return chest==null?Rule.OPEN:chestProfile(chest.blocks().getFirst()).filter(); }
     public static boolean mixedChestFilters() { return chest!=null && chest.blocks().stream().anyMatch(a -> !chestProfile(a).filter().equals(chestFilter())); }
-    public static String chestDescription() { return chest==null?"":chest.blocks().size()==2?"Saved to both chest halves.":"Saved to this storage block."; }
+    public static String chestDescription() { return chest==null?"":ClientChestSync.description(); }
+    public static List<ChestProfile> chestProfiles() { return chest==null?List.of():chest.blocks().stream().map(ClientRules::chestProfile).toList(); }
+    public static boolean mayImportChestProfiles() { var known=settings.sharedChests.getOrDefault(scope,Set.of()); return chest!=null && chest.blocks().stream().noneMatch(a -> known.contains(a.key())); }
+    public static void markSharedChest() { if(chest==null) return; var known=settings.sharedChests.computeIfAbsent(scope,k -> new HashSet<>()); boolean changed=false; for(var a:chest.blocks()) changed|=known.add(a.key()); if(changed) save(); }
+    public static void acceptChestProfiles(List<ChestProfile> values) { if(chest==null || values.size()!=chest.blocks().size()) return; boolean changed=false; for(int i=0;i<values.size();i++) { var address=chest.blocks().get(i); if(!chestProfile(address).equals(values.get(i))) { putChest(address,values.get(i)); changed=true; } } if(changed) save(); }
     public static String setChestFilter(Rule rule) {
         refresh(); if(chest==null) return "Chest is no longer open.";
+        if(!ClientChestSync.canEdit()) return "Wait for shared rules, or ask the filter owner to edit them.";
         for(var address:chest.blocks()) putChest(address,chestProfile(address).withFilter(rule));
-        refresh(); return save()?"Saved automatically.":"Applied in memory; settings could not be saved.";
+        ClientChestSync.edited(); refresh(); return save()?"Saved automatically.":"Applied in memory; settings could not be saved.";
     }
     public static void resetChest() {
         refresh(); if(chest==null) return;
-        chest.blocks().forEach(address -> storage().remove(address.key())); save(); refresh();
+        if(!ClientChestSync.canEdit()) return;
+        chest.blocks().forEach(address -> storage().remove(address.key())); save(); ClientChestSync.edited(); refresh();
     }
     public static void storageChanged(net.minecraft.client.multiplayer.ClientLevel level,net.minecraft.core.BlockPos position,net.minecraft.world.level.block.state.BlockState state) {
         var mc=Minecraft.getInstance();

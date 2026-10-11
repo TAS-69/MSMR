@@ -77,14 +77,16 @@ public abstract class ScreenMixin extends Screen implements InventoryAnchor {
     private void msmr$position(GuiGraphics g,int mx,int my,float delta,CallbackInfo ci) {
         msmr$positionTabs();
     }
+    @Inject(method="onClose",at=@At("HEAD"),cancellable=true)
+    private void msmr$saveBeforeClose(CallbackInfo ci) { if(ClientChestSync.deferClose()) ci.cancel(); }
     @Unique private void msmr$positionTabs() {
         msmr$updateControls();
-        int y=Math.max(0,Math.min(topPos+6,height-52-msmr$shortcuts.size()*24));
+        int y=Math.max(0,Math.min(topPos+6,height-52-msmr$shortcuts.size()*20));
         for(int i=0;i<msmr$tabs.size();i++) {
             Button tab=msmr$tabs.get(i); tab.setX(msmr$tabLeft()); tab.setY(y+i*24);
             tab.active=!ClientTransfers.busy();
         }
-        for(int i=0;i<msmr$shortcuts.size();i++) { Button b=msmr$shortcuts.get(i); b.setX(msmr$tabLeft()+2); b.setY(y+52+i*24); b.active=!ClientTransfers.busy() && Minecraft.getInstance().player.containerMenu.getCarried().isEmpty(); }
+        for(int i=0;i<msmr$shortcuts.size();i++) { Button b=msmr$shortcuts.get(i); b.setX(msmr$tabLeft()+5); b.setY(y+52+i*20); b.active=!ClientTransfers.busy() && Minecraft.getInstance().player.containerMenu.getCarried().isEmpty(); }
         for(int i=0;i<msmr$transfers.size();i++) { Button b=msmr$transfers.get(i); b.setX(leftPos+imageWidth-44+i*22); b.setY(Math.max(0,topPos-20)); b.active=!ClientTransfers.busy() && Minecraft.getInstance().player.containerMenu.getCarried().isEmpty(); }
     }
     @Unique private void msmr$updateControls() {

@@ -7,12 +7,13 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.item.ItemStack;
 
-/** Only server-authoritative rules live here. Optional clients never affect other players. */
+/** Player pickup rules and versioned requests; shared storage validates ownership separately. */
 public final class ServerPickupRules {
     private record Local(MinecraftServer server,UUID player,FilterSnapshot rules) {}
     private record Remote(FilterSnapshot rules,long revision) {}
     private static volatile Local local;
     private static final Map<ServerPlayer,Remote> remote=Collections.synchronizedMap(new WeakHashMap<>());
+    private static final Map<ServerPlayer,long[]> budget=new WeakHashMap<>();
     private ServerPickupRules() {}
     public static void clearLocal() { local=null; }
     public static void publishLocal(MinecraftServer server,UUID player,Rule wide,Map<Integer,Rule> slots) {
@@ -22,6 +23,10 @@ public final class ServerPickupRules {
         local=new Local(server,player,new FilterSnapshot(wide,slots));
     }
     public static void receive(ServerPlayer player,FilterPayload payload,Consumer<FilterPayload> reply) {
+        long window=System.nanoTime()/1_000_000_000L; var count=budget.computeIfAbsent(player,p -> new long[]{window,0});
+        if(count[0]!=window) { count[0]=window; count[1]=0; }
+        if(++count[1]>100) return;
+        if(payload.kind()>=FilterPayload.CHEST_GET) { ServerStorage.receive(player,payload,reply); return; }
         if(payload.kind()==FilterPayload.PROBE && payload.revision()==FilterPayload.VERSION) { reply.accept(FilterPayload.signal(FilterPayload.HELLO,FilterPayload.VERSION)); return; }
         if(payload.kind()!=FilterPayload.RULES || payload.revision()<1) return;
         Remote old=remote.get(player);
@@ -34,6 +39,7 @@ public final class ServerPickupRules {
             org.slf4j.LoggerFactory.getLogger("MSMR").warn("Ignored invalid filters from {}",player.getUUID());
         }
     }
+    public static long revision(ServerPlayer player) { var value=remote.get(player); return value==null?0:value.revision; }
     public static boolean add(Inventory inventory,ItemStack stack) {
         FilterSnapshot rules=forPlayer(inventory.player);
         return rules==null?inventory.add(stack):PickupFilters.insert(inventory,stack,rules.inventory(),rules.slots());

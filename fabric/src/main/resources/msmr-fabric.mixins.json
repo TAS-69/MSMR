@@ -1,0 +1,8 @@
+{
+  "required": true,
+  "package": "dev.msmr.fabric.mixin",
+  "plugin": "dev.msmr.fabric.FabricTransferPlugin",
+  "compatibilityLevel": "JAVA_21",
+  "mixins": ["InventoryStorageAccess", "FabricStorageMixin"],
+  "injectors": {"defaultRequire": 1}
+}

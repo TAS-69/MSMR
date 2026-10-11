@@ -1,10 +1,10 @@
 {
   "schemaVersion": 1, "id": "msmr", "version": "${version}",
-  "name": "My Slots, My Rules", "description": "Inventory filters with optional server pickup support.",
+  "name": "My Slots, My Rules", "description": "Inventory filters, quick profiles and optional shared server chest rules.",
   "authors": ["Walden"], "license": "CC0-1.0", "environment": "*",
   "icon": "assets/msmr/textures/gui/icon.png",
   "entrypoints": {"main": ["dev.msmr.fabric.MsmrCommon"], "client": ["dev.msmr.fabric.MsmrClient"]},
-  "mixins": ["msmr.mixins.json"],
+  "mixins": ["msmr.mixins.json", "msmr-fabric.mixins.json"],
   "suggests": {"fabric-networking-api-v1": "*"},
   "depends": {"fabricloader": ">=0.16.9", "minecraft": "1.21.1", "java": ">=21"}
 }

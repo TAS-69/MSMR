@@ -13,7 +13,7 @@ import net.minecraft.world.item.ItemStack;
 public final class ProfileButton extends Button {
     private final String profile;
     public ProfileButton(int x,int y,String profile,OnPress press) {
-        super(x,y,24,22,Component.literal("Profile: "+profile),press,DEFAULT_NARRATION); this.profile=profile;
+        super(x,y,18,18,Component.literal("Profile: "+profile),press,DEFAULT_NARRATION); this.profile=profile;
         setTooltip(Tooltip.create(Component.literal(profile+"\nClick to switch. Customize in Advanced > Profiles.")));
     }
     @Override protected void renderWidget(GuiGraphics g,int mx,int my,float delta) {
@@ -24,13 +24,13 @@ public final class ProfileButton extends Button {
         g.fill(x+2,y+2,x+width-2,y+height-2,0xFF000000|color);
         if(!badge.item().isEmpty()) {
             var item=BuiltInRegistries.ITEM.getOptional(ResourceLocation.parse(badge.item()));
-            if(item.isPresent()) g.renderItem(new ItemStack(item.get()),x+4,y+3);
+            if(item.isPresent()) { g.pose().pushPose(); g.pose().translate(x+3,y+3,0); g.pose().scale(0.75F,0.75F,1); g.renderItem(new ItemStack(item.get()),0,0); g.pose().popPose(); }
             else letter(g,badge.letter(),color,x,y);
         } else letter(g,badge.letter(),color,x,y);
         if(!active) g.fill(x+2,y+2,x+width-2,y+height-2,0x60000000);
     }
     private void letter(GuiGraphics g,String letter,int color,int x,int y) {
         int brightness=(((color>>16)&255)*299+((color>>8)&255)*587+(color&255)*114)/1000;
-        var font=Minecraft.getInstance().font; g.drawString(font,letter,x+(width-font.width(letter))/2,y+7,brightness>145?0xFF202020:0xFFFFFFFF,false);
+        var font=Minecraft.getInstance().font; g.drawString(font,letter,x+(width-font.width(letter))/2,y+5,brightness>145?0xFF202020:0xFFFFFFFF,false);
     }
 }

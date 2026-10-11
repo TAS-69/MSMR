@@ -6,9 +6,9 @@
 
 **Keep the loot. Leave the clutter.**
 
-Minecraft **1.21.1** · **Fabric & NeoForge** · **0.9.0**
+Minecraft **1.21.1** · **Fabric & NeoForge** · **0.10.0**
 
-**[⬇ Fabric](https://github.com/TAS-69/MSMR/releases/download/v0.9.0/msmr-fabric-1.21.1-0.9.0.jar) · [⬇ NeoForge](https://github.com/TAS-69/MSMR/releases/download/v0.9.0/msmr-neoforge-1.21.1-0.9.0.jar) · [📖 Wiki](https://github.com/TAS-69/MSMR/wiki)**
+**[⬇ Fabric](https://github.com/TAS-69/MSMR/releases/download/v0.10.0/msmr-fabric-1.21.1-0.10.0.jar) · [⬇ NeoForge](https://github.com/TAS-69/MSMR/releases/download/v0.10.0/msmr-neoforge-1.21.1-0.10.0.jar) · [📖 Wiki](https://github.com/TAS-69/MSMR/wiki)**
 
 </div>
 
@@ -81,16 +81,24 @@ Open a chest → click the **MSMR tab** → choose what belongs. Whole-chest and
 
 Player and chest rules persist per world/server. Other supported container rules last while the container is open.
 
+## Hoppers read the room.
+
+**Shared chest rules protect against unwanted insertions from hoppers, droppers, other players, and supported modded inventory tools.** Install MSMR on the server to make the chest's rules apply to everyone. Singleplayer already includes this support.
+
+Rules save with the chest. The first player to set them becomes the filter owner; the owner and server operators can edit them. Everyone can still take items out.
+
+**Busy chest? Safe moves.** Supported servers handle sorting and transfers against live inventory contents. Acknowledgements, identical-request retries, and stale-state checks prevent delayed replies from repeating a move. [Multiplayer & automation →](https://github.com/TAS-69/MSMR/wiki/Multiplayer-and-Automation)
+
 ## Install & play
 
 Download **one JAR** for your loader, put it in your instance's **`mods`** folder, and launch Minecraft **1.21.1**.
 
-| Playing where? | Pickup filtering needs |
+| Playing where? | Pickup filtering and shared chest automation need |
 | --- | --- |
 | **Singleplayer** | MSMR on your client. **No Fabric API required.** |
 | **Multiplayer** | MSMR on the client **and server**. Fabric endpoints also need Fabric API; NeoForge includes networking. |
 
-**You can join unsupported servers.** Local inventory tools still work; ground-pickup filtering shows **Unavailable**.
+**You can join unsupported servers.** Local inventory tools still work; ground-pickup filtering shows **Unavailable**, and chest rules remain local.
 
 Requires Java **21**, Fabric Loader **0.16.9+** or NeoForge **21.1.80+**. [Installation help →](https://github.com/TAS-69/MSMR/wiki/Installation)
 

@@ -11,10 +11,10 @@ import net.minecraft.server.level.ServerPlayer;
 public final class MsmrCommon {
     public MsmrCommon(IEventBus bus) { bus.addListener(MsmrCommon::register); }
     private static void register(RegisterPayloadHandlersEvent event) {
-        event.registrar("1").optional().playBidirectional(FilterPayload.TYPE,FilterPayload.CODEC,(payload,context) -> {
+        event.registrar("2").optional().playBidirectional(FilterPayload.TYPE,FilterPayload.CODEC,(payload,context) -> context.enqueueWork(() -> {
             if(context.flow()==PacketFlow.SERVERBOUND && context.player() instanceof ServerPlayer player)
                 ServerPickupRules.receive(player,payload,context::reply);
             else if(context.flow()==PacketFlow.CLIENTBOUND) NeoClientNetworking.receive(payload);
-        });
+        }));
     }
 }

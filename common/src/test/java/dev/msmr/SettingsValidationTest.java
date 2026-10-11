@@ -22,4 +22,10 @@ class SettingsValidationTest {
         for(String text:new String[]{"{inventories:{test:{'36':{mode:'ALL',entries:[],limit:0}}}}","{activeProfiles:{test:'../bad'}}"})
             assertThrows(RuntimeException.class,() -> ClientRules.validate(JSON.fromJson(text,ClientRules.Settings.class)),text);
     }
+    @Test void validatesPreviouslySharedChestMarkersAndKeepsOldSettingsCompatible() {
+        var old=JSON.fromJson("{}",ClientRules.Settings.class); assertDoesNotThrow(() -> ClientRules.validate(old));
+        old.sharedChests.put("world/test",java.util.Set.of(new ChestAddress("minecraft:overworld","minecraft:chest",1,2,3).key()));
+        assertDoesNotThrow(() -> ClientRules.validate(JSON.fromJson(JSON.toJson(old),ClientRules.Settings.class)));
+        old.sharedChests.put("world/test",java.util.Set.of("invalid")); assertThrows(RuntimeException.class,() -> ClientRules.validate(old));
+    }
 }

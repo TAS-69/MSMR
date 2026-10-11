@@ -12,6 +12,7 @@ dependencies {
     }
     modImplementation "net.fabricmc:fabric-loader:${fabric_loader_version}"
     modCompileOnly "net.fabricmc.fabric-api:fabric-networking-api-v1:4.3.0+c7469b2119"
+    modCompileOnly "net.fabricmc.fabric-api:fabric-transfer-api-v1:5.4.2+95bead5f19"
     if (providers.gradleProperty('withApi').isPresent()) modRuntimeOnly "net.fabricmc.fabric-api:fabric-api:${fabric_version}"
 }
 

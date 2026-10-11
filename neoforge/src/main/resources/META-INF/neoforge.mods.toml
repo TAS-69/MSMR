@@ -7,7 +7,7 @@ version="${version}"
 displayName="My Slots, My Rules"
 logoFile="assets/msmr/textures/gui/icon.png"
 authors="Walden"
-description='''Inventory filtering with optional server pickup support. Client-only use remains supported.'''
+description='''Inventory filters, quick profiles and optional shared server chest rules. Client-only use remains supported.'''
 displayTest="IGNORE_ALL_VERSION"
 [[mixins]]
 config="msmr.mixins.json"
@@ -23,3 +23,5 @@ type="required"
 versionRange="[1.21.1,1.21.2)"
 ordering="NONE"
 side="BOTH"
+[[mixins]]
+config="msmr-neoforge.mixins.json"
