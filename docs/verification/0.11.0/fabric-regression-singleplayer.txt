@@ -1,0 +1,87 @@
+PASS main pickup screen hides raw IDs and advanced text fields
+PASS first item selection immediately creates a pickup-only blacklist
+PASS Only mode saves immediately
+PASS All pickup mode preserves selections for later
+PASS None pickup mode saves immediately
+PASS main pause control disables only pickup action
+PASS clicking a selected search result removes it immediately
+PASS held-item shortcut adds a real selected hotbar item
+PASS main icon removal saves immediately
+PASS held shortcut respects the 64-entry limit
+PASS selected entries beyond the first page can be removed
+PASS removing a focused selected item leaves keyboard focus on a live control
+PASS picker clear saves immediately, including all pages
+PASS main item picker blocks selected drops immediately without Apply
+PASS blocked ground sticks remain as a real drop and never enter inventory
+PASS move toggle permits inventory movement while pickup filter stays enabled
+PASS pickup filter stays active when movement filtering is disabled
+PASS pickup toggle allows the exact retained ground stack without loss or duplication
+PASS slot pickup filters route to reserved slot and retain capped remainder on ground: slot9=3 minecraft:stick, total=3, drops=1, rule=Rule[mode=WHITELIST, entries=[minecraft:stick], limit=3, pickups=true, moving=true]
+PASS live cap edit collects remainder and conserves total items
+PASS two attached inventory tabs keep advanced tools out of the main interface
+PASS explicit Block selected prevents left-click stick placement
+PASS explicit Block selected prevents right-click stick placement
+PASS inventory-wide editor applies mode and categories
+PASS smart search selection updates the live filter
+PASS held-item tag lookup uses synchronized world tags
+PASS block-tag lookup discovers server block categories
+PASS lookup toggles update the applied rule immediately
+PASS profile save and copy through UI
+PASS profile delete keeps original
+PASS profile switching restores inventory rule
+PASS whole-inventory editor switches to block-all
+PASS whole-inventory clear restores allow-all
+PASS manual placement rejects wrong item
+PASS left placement rejects stack above cap
+PASS drag distribution cannot bypass active filters
+PASS right placement fills exactly to cap
+PASS number-key swap rejects wrong item
+PASS block-all permits extraction
+PASS shift-click honors cap, blocked slots and source remainder after server sync
+PASS fill reserved prefers matching slot and preserves counts
+PASS right-drag paints multiple slot rules without moving items
+PASS slot editor copies and pastes mode, entries and cap
+PASS slot editor clear resets rule
+PASS opening an editor cancels an unsent server move or preserves a local move's carried items
+PASS interrupted transfer can safely return items to source
+PASS queued transfers preserve custom item components on both stacks
+PASS server moves respect corrected contents; local queued moves preserve the cursor remainder after a correction
+PASS chest shift-click respects global destination rules, caps and source remainder
+PASS chest slot rules restore automatically after container closure
+PASS fresh chest item selection automatically creates its own whitelist
+PASS whole-chest edits never change the player inventory filter
+PASS whole-chest whitelist rejects manual placement of the wrong item
+PASS whole-chest whitelist rejects wrong-item shift-click without moving the source
+PASS saved chest slot rules route matching shift-click stacks and preserve capped remainders
+PASS switching player profiles leaves chest-wide and chest-slot rules unchanged
+PASS a second identically named chest has an independent empty setup
+PASS first chest restores wide and slot rules after reloading settings from disk
+PASS second chest restores its different mode after settings reload
+PASS chest pause toggles insertion filtering independently of player pickup support
+PASS simple chest controls preserve advanced stack limits
+PASS smart tag lookup edits only the open chest's saved setup
+PASS double chest is identified as two physical halves
+PASS opening the other double-chest half preserves top/bottom slot ownership
+PASS splitting a double chest retains the surviving half's wide and slot rules
+PASS observed chest removal clears its saved setup before a replacement is opened
+PASS barrels also restore their own saved filter
+PASS reset chest filters clears only that storage block's saved setup
+PASS chest setup persists across disconnect/reconnect and a settings-file reload
+PASS trapped chests restore their own category filter
+PASS Creative chest placement respects the saved blacklist
+PASS the same chest coordinates in another dimension have an independent setup
+PASS returning from another dimension restores the original chest's different rules
+PASS all drawer controls fit compact GUI scale
+PASS tabs track recipe-book repositioning without covering recipe controls
+PASS rendering an editor sends zero recipe-book settings packets
+PASS closing drawer restores recipe-book visibility
+PASS inventory tab remains clickable with recipe book at minimum GUI width
+PASS item-grid controls fit minimum GUI width and height
+PASS advanced menu controls fit minimum GUI width and height
+PASS whole-inventory blacklist rejects manual placement
+PASS client-only filters safely accept authoritative server changes
+PASS slot rules survive closing and reopening inventory
+PASS authoritative saved server inventory exactly matches client items, counts and components
+PASS disconnect/reconnect restores scoped profiles and slot rules
+PASS server reconnect preserves exact item stacks
+PASS different singleplayer world has isolated profiles and filters

@@ -35,9 +35,9 @@ public abstract class ClientClickMixin {
             if(!ClickPolicy.permits(rule,existing,cursor,amount) || !ClickPolicy.permits(ClientRules.moveInventoryFilter(slot),existing,cursor,amount)) ci.cancel();
         } else if(type==ClickType.SWAP && (button>=0 && button<9 || button==40)) {
             ItemStack incoming=player.getInventory().getItem(button);
-            if(!ClickPolicy.permits(rule,ItemStack.EMPTY,incoming,incoming.getCount()) || !ClientRules.moveInventoryFilter(slot).accepts(incoming)) { ci.cancel(); return; }
+            if(!ClickPolicy.permits(rule,ItemStack.EMPTY,incoming,incoming.getCount()) || !ClickPolicy.permits(ClientRules.moveInventoryFilter(slot),ItemStack.EMPTY,incoming,incoming.getCount())) { ci.cancel(); return; }
             for(Slot hotbar:menu.slots) if(hotbar.container==player.getInventory() && hotbar.getContainerSlot()==button
-                && (!ClickPolicy.permits(ClientRules.moveRule(hotbar),ItemStack.EMPTY,existing,existing.getCount()) || !ClientRules.moveInventoryFilter(hotbar).accepts(existing))) { ci.cancel(); return; }
+                && (!ClickPolicy.permits(ClientRules.moveRule(hotbar),ItemStack.EMPTY,existing,existing.getCount()) || !ClickPolicy.permits(ClientRules.moveInventoryFilter(hotbar),ItemStack.EMPTY,existing,existing.getCount()))) { ci.cancel(); return; }
         }
     }
 }

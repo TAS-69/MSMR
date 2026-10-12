@@ -4,7 +4,7 @@
   "package": "dev.msmr.mixin",
   "refmap": "msmr.refmap.json",
   "compatibilityLevel": "JAVA_21",
-  "mixins": ["ServerPickupMixin", "ChestDataMixin", "CompoundContainerAccess", "ServerSlotMixin", "ChestInsertionMixin", "HopperInsertionMixin"],
+  "mixins": ["ServerPickupMixin", "ChestDataMixin", "CompoundContainerAccess", "ServerSlotMixin", "ChestInsertionMixin", "HopperInsertionMixin", "CreativePlacementMixin", "PlayerRespawnMixin"],
   "client": ["ScreenMixin", "ClientClickMixin", "ClientTickMixin", "InventoryScreenMixin", "RecipeBookVisibility", "ChestInteractionMixin", "ChestMenuMixin", "ChestBlockUpdateMixin", "ChestScreenMixin", "SharedChestCloseMixin"],
   "injectors": {"defaultRequire": 1}
 }

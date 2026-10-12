@@ -16,13 +16,14 @@ public final class InventoryFilterScreen extends InventoryPanelScreen {
     private final boolean profiles;
     private final boolean chest;
     private boolean advanced, pickups=true, moving=true, updating;
+    private int savedLimit;
     private List<LookupCatalog.Entry> catalog=List.of();
     public InventoryFilterScreen(Screen parent) { this(parent,false); }
     public InventoryFilterScreen(Screen parent,boolean profiles) { super(Component.literal(profiles?"Inventory profiles":ClientRules.hasChest()?"Whole chest":"Whole inventory"),parent,218); this.profiles=profiles; this.chest=!profiles && ClientRules.hasChest(); }
     private Rule currentRule() { return chest?ClientRules.chestFilter():ClientRules.inventoryFilter(); }
     private String setRule(Rule rule) { return chest?ClientRules.setChestFilter(rule):ClientRules.setInventoryFilter(rule); }
     @Override protected void init() {
-        ClientRules.refresh(); Rule rule=currentRule(); if(entries==null) { mode=rule.mode(); pickups=rule.pickups(); moving=rule.moving(); }
+        ClientRules.refresh(); Rule rule=currentRule(); if(entries==null) { mode=rule.mode(); pickups=rule.pickups(); moving=rule.moving(); savedLimit=rule.limit(); }
         String previousEntries=entries==null?String.join(",",rule.entries()):entries.getValue();
         String previousName=name==null?null:name.getValue();
         List<String> names=ClientRules.profileNames(); if(!names.contains(selected)) selected=names.isEmpty()?"":names.getFirst();
@@ -45,7 +46,7 @@ public final class InventoryFilterScreen extends InventoryPanelScreen {
         }).bounds(x,y+164,145,20).build());
 
         addRenderableWidget(Button.builder(Component.literal("Reset"),b -> {
-            mode=Rule.Mode.ALL; pickups=true; moving=true; entries.setValue(""); status=setRule(Rule.OPEN); rebuildWidgets();
+            mode=Rule.Mode.ALL; pickups=true; moving=true; savedLimit=0; entries.setValue(""); status=setRule(Rule.OPEN); rebuildWidgets();
         }).bounds(x+155,y+164,145,20).tooltip(Tooltip.create(Component.literal(chest?"Reset the whole-chest rule; individual slot rules remain.":"Reset the whole-inventory rule; individual slot rules remain."))).build());
         pickupButton=addRenderableWidget(Button.builder(Component.literal((pickups?"[x] ":"[ ] ")+"Pickups"),b -> { pickups=!pickups; apply(); rebuildWidgets(); }).bounds(x,y+74,145,18).tooltip(Tooltip.create(Component.literal(ClientCapabilities.pickupExplanation()))).build());
         pickupButton.active=ClientCapabilities.pickupsAvailable();
@@ -83,7 +84,7 @@ public final class InventoryFilterScreen extends InventoryPanelScreen {
         List<String> current=Arrays.stream(entries.getValue().split(",")).map(String::trim).filter(s -> !s.isEmpty()).toList();
         minecraft.setScreen(new LookupScreen(this,current,kind,values -> { entries.setValue(String.join(",",values)); status="Saved automatically."; }));
     }
-    private Rule draft() { return new Rule(mode,Arrays.stream(entries.getValue().split(",")).map(String::trim).filter(s -> !s.isEmpty()).toList(),0,pickups,moving); }
+    private Rule draft() { return new Rule(mode,Arrays.stream(entries.getValue().split(",")).map(String::trim).filter(s -> !s.isEmpty()).toList(),savedLimit,pickups,moving); }
     private void apply() {
         if(profiles || entries==null) return;
         try { Rule value=draft(); status=value.equals(currentRule())?"Saved automatically.":setRule(value); }

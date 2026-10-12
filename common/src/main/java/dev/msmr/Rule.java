@@ -1,6 +1,7 @@
 package dev.msmr;
 
 import java.util.*;
+import java.util.function.Predicate;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.tags.TagKey;
@@ -8,6 +9,7 @@ import net.minecraft.core.registries.Registries;
 import net.minecraft.world.item.ItemStack;
 
 public record Rule(Mode mode, List<String> entries, int limit, Boolean pickups, Boolean moving) {
+    private static final Map<Rule,List<Predicate<ItemStack>>> compiled=Collections.synchronizedMap(new WeakHashMap<>());
     public Rule(Mode mode,List<String> entries,int limit) { this(mode,entries,limit,true,true); }
     public Rule forMoving() { return moving ? this : OPEN; }
     public Rule forPickups() { return pickups ? this : OPEN; }
@@ -36,11 +38,19 @@ public record Rule(Mode mode, List<String> entries, int limit, Boolean pickups, 
         if (stack.isEmpty()) return true;
         if (mode == Mode.ALL) return true;
         if (mode == Mode.BLOCK) return false;
-        boolean match = entries.stream().anyMatch(e -> e.startsWith("@") ? ItemCategories.matches(e.substring(1),stack)
-            : e.startsWith("#block:") ? stack.getItem() instanceof net.minecraft.world.item.BlockItem block && block.getBlock().builtInRegistryHolder().is(TagKey.create(Registries.BLOCK,ResourceLocation.parse(e.substring(7)))) : e.startsWith("#")
-            ? stack.is(TagKey.create(Registries.ITEM, ResourceLocation.parse(e.substring(1))))
-            : BuiltInRegistries.ITEM.getKey(stack.getItem()).equals(ResourceLocation.parse(e)));
+        boolean match=false;
+        for(var predicate:compiled.computeIfAbsent(this,Rule::compile)) if(predicate.test(stack)) { match=true; break; }
         return mode == Mode.WHITELIST ? match : !match;
+    }
+    private static List<Predicate<ItemStack>> compile(Rule rule) {
+        List<Predicate<ItemStack>> result=new ArrayList<>();
+        for(String entry:rule.entries()) {
+            if(entry.startsWith("@")) { String name=entry.substring(1); result.add(stack -> ItemCategories.matches(name,stack)); }
+            else if(entry.startsWith("#block:")) { var tag=TagKey.create(Registries.BLOCK,ResourceLocation.parse(entry.substring(7))); result.add(stack -> stack.getItem() instanceof net.minecraft.world.item.BlockItem block && block.getBlock().builtInRegistryHolder().is(tag)); }
+            else if(entry.startsWith("#")) { var tag=TagKey.create(Registries.ITEM,ResourceLocation.parse(entry.substring(1))); result.add(stack -> stack.is(tag)); }
+            else { var id=ResourceLocation.parse(entry); result.add(stack -> BuiltInRegistries.ITEM.getKey(stack.getItem()).equals(id)); }
+        }
+        return List.copyOf(result);
     }
     public int cap(ItemStack stack) { return limit == 0 ? stack.getMaxStackSize() : Math.min(limit, stack.getMaxStackSize()); }
     public boolean unrestricted() { return mode==Mode.ALL && limit==0; }

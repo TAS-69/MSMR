@@ -79,9 +79,11 @@ public final class PickupScreen extends InventoryPanelScreen {
         addRenderableWidget(Button.builder(Component.literal("Back to inventory"),b -> onClose()).bounds(x+155,y+198,145,20).build());
     }
     @Override public void render(GuiGraphics g,int mx,int my,float delta) {
-        boolean available=chest?ClientRules.hasChest():ClientCapabilities.pickupsAvailable(); enabled.active=available;
+        boolean available=chest?ClientRules.hasChest():ClientCapabilities.pickupsAvailable();
+        if(chest) for(var child:children()) if(child instanceof Button b && !List.of("Advanced...","Back to inventory","<",">").contains(b.getMessage().getString())) b.active=ClientChestSync.canEdit();
+        enabled.active=available && (!chest || ClientChestSync.canEdit());
         enabled.setMessage(Component.literal(!available?"Unavailable":enabled()?"ON":"Paused"));
-        enabled.setTooltip(Tooltip.create(Component.literal(chest?"Toggle this chest's whole-container filter. Individual slot rules remain separate.":ClientCapabilities.pickupExplanation()+"\nControls this inventory-wide pickup filter. Slot rules have separate switches; movement controls are in Advanced.")));
+        enabled.setTooltip(Tooltip.create(Component.literal(chest?ClientRules.chestDescription()+"\nToggle this chest's whole-container filter. Individual slot rules remain separate.":ClientCapabilities.pickupExplanation()+"\nControls this inventory-wide pickup filter. Slot rules have separate switches; movement controls are in Advanced.")));
         renderPanel(g,mx,my,delta); int x=panelX,y=panelY;
         g.blit(ModIcon.texture(),x,y,0,0,14,14,14,14); g.drawString(font,title,x+19,y+2,0x303030,false);
         g.drawString(font,chest?"Choose what goes into this chest.":"Choose what you pick up.",x,y+19,0x404040,false);

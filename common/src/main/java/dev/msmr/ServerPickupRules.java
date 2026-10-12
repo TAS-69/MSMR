@@ -13,7 +13,7 @@ public final class ServerPickupRules {
     private record Remote(FilterSnapshot rules,long revision) {}
     private static volatile Local local;
     private static final Map<ServerPlayer,Remote> remote=Collections.synchronizedMap(new WeakHashMap<>());
-    private static final Map<ServerPlayer,long[]> budget=new WeakHashMap<>();
+    private static final Map<ServerPlayer,RequestBudget> budget=new WeakHashMap<>();
     private ServerPickupRules() {}
     public static void clearLocal() { local=null; }
     public static void publishLocal(MinecraftServer server,UUID player,Rule wide,Map<Integer,Rule> slots) {
@@ -23,9 +23,8 @@ public final class ServerPickupRules {
         local=new Local(server,player,new FilterSnapshot(wide,slots));
     }
     public static void receive(ServerPlayer player,FilterPayload payload,Consumer<FilterPayload> reply) {
-        long window=System.nanoTime()/1_000_000_000L; var count=budget.computeIfAbsent(player,p -> new long[]{window,0});
-        if(count[0]!=window) { count[0]=window; count[1]=0; }
-        if(++count[1]>100) return;
+        long now=System.nanoTime(); var count=budget.computeIfAbsent(player,p -> new RequestBudget(now));
+        if(!count.allow(payload.data().length,now)) return;
         if(payload.kind()>=FilterPayload.CHEST_GET) { ServerStorage.receive(player,payload,reply); return; }
         if(payload.kind()==FilterPayload.PROBE && payload.revision()==FilterPayload.VERSION) { reply.accept(FilterPayload.signal(FilterPayload.HELLO,FilterPayload.VERSION)); return; }
         if(payload.kind()!=FilterPayload.RULES || payload.revision()<1) return;
@@ -36,10 +35,21 @@ public final class ServerPickupRules {
             remote.put(player,new Remote(snapshot,payload.revision()));
             reply.accept(FilterPayload.signal(FilterPayload.ACK,payload.revision()));
         } catch(RuntimeException ex) {
-            org.slf4j.LoggerFactory.getLogger("MSMR").warn("Ignored invalid filters from {}",player.getUUID());
+            invalid(player,"filters");
         }
     }
+    public static void invalid(ServerPlayer player,String kind) {
+        var count=budget.get(player);
+        if(count!=null && count.warn(System.nanoTime())) org.slf4j.LoggerFactory.getLogger("MSMR").warn("Ignored invalid {} request from {}",kind,player.getUUID());
+    }
     public static long revision(ServerPlayer player) { var value=remote.get(player); return value==null?0:value.revision; }
+    /** Respawn replaces ServerPlayer while preserving the network connection and client rule revision. */
+    public static void respawn(ServerPlayer original,ServerPlayer replacement) {
+        if(original==replacement || !original.getUUID().equals(replacement.getUUID()) || original.getServer()!=replacement.getServer()) return;
+        Remote rules=remote.remove(original);
+        if(rules!=null) remote.put(replacement,rules);
+        budget.remove(original);
+    }
     public static boolean add(Inventory inventory,ItemStack stack) {
         FilterSnapshot rules=forPlayer(inventory.player);
         return rules==null?inventory.add(stack):PickupFilters.insert(inventory,stack,rules.inventory(),rules.slots());

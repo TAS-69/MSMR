@@ -51,6 +51,7 @@ public final class LookupScreen extends InventoryPanelScreen {
         refreshRows(); setInitialFocus(search);
     }
     private void refreshRows() {
+        boolean refocus=rows.contains(getFocused());
         for(Row row:rows) removeWidget(row); rows.clear();
         String held=minecraft.player==null?"":BuiltInRegistries.ITEM.getKey(minecraft.player.getMainHandItem().getItem()).toString();
         record Ranked(LookupCatalog.Entry entry,int score) {}
@@ -63,6 +64,7 @@ public final class LookupScreen extends InventoryPanelScreen {
         }
         if(previous!=null) { previous.active=page>0; next.active=page+1<pages; }
         if(heldButton!=null) heldButton.setMessage(Component.literal(heldOnly?"All tags":"Held tags"));
+        if(refocus) setFocused(rows.isEmpty()?search:rows.getFirst());
     }
     private void toggle(LookupCatalog.Entry entry) {
         if(chosen.contains(entry.token())) chosen.remove(entry.token());

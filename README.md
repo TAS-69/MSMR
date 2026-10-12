@@ -6,9 +6,9 @@
 
 **Keep the loot. Leave the clutter.**
 
-Minecraft **1.21.1** · **Fabric & NeoForge** · **0.10.0**
+Minecraft **1.21.1** · **Fabric & NeoForge** · **0.11.0**
 
-**[⬇ Fabric](https://github.com/TAS-69/MSMR/releases/download/v0.10.0/msmr-fabric-1.21.1-0.10.0.jar) · [⬇ NeoForge](https://github.com/TAS-69/MSMR/releases/download/v0.10.0/msmr-neoforge-1.21.1-0.10.0.jar) · [📖 Wiki](https://github.com/TAS-69/MSMR/wiki)**
+**[⬇ Fabric](https://github.com/TAS-69/MSMR/releases/download/v0.11.0/msmr-fabric-1.21.1-0.11.0.jar) · [⬇ NeoForge](https://github.com/TAS-69/MSMR/releases/download/v0.11.0/msmr-neoforge-1.21.1-0.11.0.jar) · [📖 Wiki](https://github.com/TAS-69/MSMR/wiki)**
 
 </div>
 
@@ -85,7 +85,7 @@ Player and chest rules persist per world/server. Other supported container rules
 
 **Shared chest rules protect against unwanted insertions from hoppers, droppers, other players, and supported modded inventory tools.** Install MSMR on the server to make the chest's rules apply to everyone. Singleplayer already includes this support.
 
-Rules save with the chest. The first player to set them becomes the filter owner; the owner and server operators can edit them. Everyone can still take items out.
+Rules save with the chest. **Supported claims decide who can edit them.** Unclaimed chests retain the first-editor/ operator policy. FTB Chunks and Open Parties and Claims are tested; optional hybrid adapters cover several Bukkit protection plugins. [Protection & claims →](https://github.com/TAS-69/MSMR/wiki/Protection-and-Claims)
 
 **Busy chest? Safe moves.** Supported servers handle sorting and transfers against live inventory contents. Acknowledgements, identical-request retries, and stale-state checks prevent delayed replies from repeating a move. [Multiplayer & automation →](https://github.com/TAS-69/MSMR/wiki/Multiplayer-and-Automation)
 

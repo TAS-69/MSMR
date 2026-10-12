@@ -16,9 +16,11 @@ public final class ServerStorage {
     public record Part(BaseContainerBlockEntity block,int slot) {}
     private record Session(WeakReference<AbstractContainerMenu> menu,long token) {}
     private record Completed(long id,FilterPayload result) {}
+    private record StateReply(StorageProtocol.State state,byte[] data) {}
     private static final Map<ServerPlayer,Session> sessions=new WeakHashMap<>();
     private static final Map<ServerPlayer,Completed> completed=new WeakHashMap<>();
     private static final Map<ServerPlayer,Completed> edited=new WeakHashMap<>();
+    private static final Map<ServerPlayer,StateReply> states=new WeakHashMap<>();
     private ServerStorage() {}
     public static Part resolve(Container container,int slot) {
         if(slot<0 || slot>=container.getContainerSize()) return null;
@@ -45,6 +47,8 @@ public final class ServerStorage {
     }
     /** Returns a remainder; never discards a rejected item or mutates a simulated insertion. */
     public static ItemStack insert(Container destination,int slot,ItemStack stack,boolean simulate) {
+        if(slot<0 || slot>=destination.getContainerSize()) throw new IndexOutOfBoundsException("Invalid insertion slot");
+        if(stack.isEmpty() || !destination.canPlaceItem(slot,stack)) return stack.copy();
         ItemStack remainder=stack.copy(),existing=destination.getItem(slot);
         if(!existing.isEmpty() && !ItemStack.isSameItemSameComponents(existing,stack)) return remainder;
         int amount=Math.min(stack.getCount(),Math.max(0,Math.min(destination.getMaxStackSize(stack),cap(destination,slot,stack))-existing.getCount()));
@@ -57,7 +61,8 @@ public final class ServerStorage {
         var result=new ArrayList<BaseContainerBlockEntity>();
         for(int i=0;i<chest.getRowCount()*9;i+=27) {
             Slot slot=menu.getSlot(i); var part=resolve(slot.container,slot.getContainerSlot());
-            if(part==null || part.slot()!=0 || part.block().getLevel()!=player.level() || part.block().isRemoved() || !part.block().canOpen(player)) return List.of();
+            if(part==null || part.slot()!=0 || part.block().getLevel()!=player.level() || part.block().isRemoved()
+                || player.level().getBlockEntity(part.block().getBlockPos())!=part.block() || !part.block().canOpen(player)) return List.of();
             result.add(part.block());
         }
         return result.size()>2?List.of():result;
@@ -65,15 +70,36 @@ public final class ServerStorage {
     private static Session session(ServerPlayer player) {
         return sessions.compute(player,(p,old) -> old!=null && old.menu().get()==p.containerMenu?old:new Session(new WeakReference<>(p.containerMenu),UUID.randomUUID().getMostSignificantBits()));
     }
-    private static boolean editable(ServerPlayer player,List<BaseContainerBlockEntity> blocks) { return blocks.stream().allMatch(b -> { UUID owner=((ChestData)b).msmr$owner(); return owner==null || owner.equals(player.getUUID()) || player.hasPermissions(2); }); }
+    private static ServerProtection.Access access(ServerPlayer player,List<BaseContainerBlockEntity> blocks,ServerProtection.Operation operation) {
+        boolean managed=false;
+        for(var block:blocks) {
+            var result=ServerProtection.check(player,block,operation);
+            if(!result.allowed()) return result;
+            managed|=result.managed();
+        }
+        return new ServerProtection.Access(true,managed,"");
+    }
+    private static boolean editable(ServerPlayer player,List<BaseContainerBlockEntity> blocks) {
+        return blocks.stream().allMatch(b -> ServerProtection.mayEdit(ServerProtection.check(player,b,ServerProtection.Operation.EDIT_FILTERS),((ChestData)b).msmr$owner(),player.getUUID(),player.hasPermissions(2)));
+    }
     private static StorageProtocol.State state(ServerPlayer player,String message) {
         var blocks=blocks(player); var session=session(player);
+        var allowed=access(player,blocks,ServerProtection.Operation.ACCESS);
+        if(!allowed.allowed()) return new StorageProtocol.State(player.containerMenu.containerId,session.token(),List.of(),List.of(),false,allowed.message());
         return new StorageProtocol.State(player.containerMenu.containerId,session.token(),blocks.stream().map(b -> ((ChestData)b).msmr$version()).toList(),blocks.stream().map(b -> ((ChestData)b).msmr$profile()).toList(),!blocks.isEmpty() && editable(player,blocks),message);
+    }
+    private static FilterPayload statePayload(ServerPlayer player,long id,String message) {
+        var current=state(player,message); var old=states.get(player);
+        if(old==null || !old.state().equals(current)) {
+            var encoded=FilterPayload.encode(FilterPayload.CHEST_STATE,id,current);
+            old=new StateReply(current,encoded.data()); states.put(player,old);
+        }
+        return new FilterPayload(FilterPayload.CHEST_STATE,id,old.data());
     }
     public static void receive(ServerPlayer player,FilterPayload packet,Consumer<FilterPayload> reply) {
         try {
             if(packet.kind()==FilterPayload.CHEST_GET) {
-                if(packet.read(StorageProtocol.Get.class).menu()==player.containerMenu.containerId) reply.accept(FilterPayload.encode(FilterPayload.CHEST_STATE,packet.revision(),state(player,"")));
+                if(packet.read(StorageProtocol.Get.class).menu()==player.containerMenu.containerId) reply.accept(statePayload(player,packet.revision(),""));
             } else if(packet.kind()==FilterPayload.CHEST_SET) {
                 var previous=edited.get(player);
                 if(previous!=null && packet.revision()<=previous.id()) { if(packet.revision()==previous.id()) reply.accept(previous.result()); return; }
@@ -81,10 +107,10 @@ public final class ServerStorage {
                 var edit=packet.read(StorageProtocol.Edit.class); var current=state(player,""); var targets=blocks(player);
                 String message="";
                 if(edit.menu()!=current.menu() || edit.token()!=current.token() || targets.size()!=edit.profiles().size()) message="Chest closed or changed. Reopen it before editing.";
-                else if(!current.editable()) message="Only the filter owner or a server operator can edit these shared rules.";
+                else if(!current.editable()) message="Your claim/chest protection or filter ownership does not permit editing these rules.";
                 else if(!edit.versions().equals(current.versions())) message="Chest rules changed. The server's current rules were restored.";
                 else for(int i=0;i<targets.size();i++) { var data=(ChestData)targets.get(i); if(!data.msmr$profile().equals(edit.profiles().get(i))) data.msmr$update(edit.profiles().get(i),data.msmr$owner()==null?player.getUUID():data.msmr$owner()); }
-                var response=FilterPayload.encode(FilterPayload.CHEST_STATE,packet.revision(),state(player,message)); edited.put(player,new Completed(packet.revision(),response)); reply.accept(response);
+                var response=statePayload(player,packet.revision(),message); edited.put(player,new Completed(packet.revision(),response)); reply.accept(response);
             } else if(packet.kind()==FilterPayload.ACTION) {
                 var old=completed.get(player);
                 if(old!=null && packet.revision()<=old.id()) { if(packet.revision()==old.id()) reply.accept(old.result()); return; }
@@ -93,7 +119,7 @@ public final class ServerStorage {
                 var response=FilterPayload.encode(FilterPayload.RESULT,packet.revision(),result); completed.put(player,new Completed(packet.revision(),response));
                 player.containerMenu.sendAllDataToRemote(); reply.accept(response);
             }
-        } catch(RuntimeException ex) { org.slf4j.LoggerFactory.getLogger("MSMR").warn("Ignored invalid storage request from {}",player.getUUID()); }
+        } catch(RuntimeException ex) { ServerPickupRules.invalid(player,"storage"); }
     }
     private static StorageProtocol.Result failure(String message) { return new StorageProtocol.Result(false,message); }
     private static StorageProtocol.Result operate(ServerPlayer player,StorageProtocol.Action request) {
@@ -102,14 +128,26 @@ public final class ServerStorage {
         if(request.rules()!=ServerPickupRules.revision(player)) return failure("Wait for inventory filters to finish syncing.");
         if(menu!=player.inventoryMenu && !(menu instanceof ChestMenu)) return failure("Open your inventory or a supported chest.");
         if(menu instanceof ChestMenu && request.chestToken()!=session(player).token()) return failure("Chest session changed. Reopen it before transferring.");
+        if(menu instanceof ChestMenu) {
+            var targets=blocks(player);
+            if(targets.isEmpty()) return failure("This server storage menu needs a specific integration. Use normal clicks.");
+            var allowed=access(player,targets,ServerProtection.Operation.ACCESS);
+            if(!allowed.allowed()) return failure(allowed.message());
+            var action=request.operation();
+            if(action.equals("to_chest") || action.equals("from_chest") || action.equals("quick_move")) {
+                boolean insert=action.equals("to_chest") || action.equals("quick_move") && request.source()>=0 && request.source()<menu.slots.size() && menu.getSlot(request.source()).container==player.getInventory();
+                allowed=access(player,targets,insert?ServerProtection.Operation.INSERT:ServerProtection.Operation.EXTRACT);
+                if(!allowed.allowed()) return failure(allowed.message());
+            }
+        }
         var snapshot=ServerPickupRules.forPlayer(player); if(snapshot==null) return failure("Inventory filters have not synced.");
         if(request.operation().equals("sort")) {
             List<Slot> slots=menu.slots.stream().filter(s -> s.container==player.getInventory() && s.getContainerSlot()<36).sorted(Comparator.comparingInt(Slot::getContainerSlot)).toList();
             if(slots.size()!=36) return failure("This menu does not support arrangement.");
-            var plan=InventorySort.plan(slots.stream().map(s -> s.getItem().copy()).toList(),slots.stream().map(s -> snapshot.slots().getOrDefault(s.getContainerSlot(),Rule.OPEN)).toList(),snapshot.inventory());
+            var plan=InventorySort.arrange(slots.stream().map(s -> s.getItem().copy()).toList(),slots.stream().map(s -> snapshot.slots().getOrDefault(s.getContainerSlot(),Rule.OPEN)).toList(),snapshot.inventory());
             if(!plan.possible()) return failure(plan.error());
             for(int i=0;i<slots.size();i++) { var s=slots.get(i); var goal=plan.result().get(i); if(!ItemStack.matches(goal,s.getItem()) && (!s.mayPickup(player) || !goal.isEmpty() && (!s.mayPlace(goal) || goal.getCount()>s.getMaxStackSize(goal)))) return failure("This menu restricts arrangement."); }
-            for(int i=0;i<slots.size();i++) slots.get(i).set(plan.result().get(i).copy());
+            for(int i=0;i<slots.size();i++) if(!ItemStack.matches(slots.get(i).getItem(),plan.result().get(i))) slots.get(i).set(plan.result().get(i).copy());
             return new StorageProtocol.Result(true,"Inventory arranged.");
         }
         boolean to=request.operation().equals("to_chest"),from=request.operation().equals("from_chest"),reserved=request.operation().equals("reserved"),quick=request.operation().equals("quick_move");

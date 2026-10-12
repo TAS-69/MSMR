@@ -14,7 +14,7 @@ public final class MsmrCommon {
         event.registrar("2").optional().playBidirectional(FilterPayload.TYPE,FilterPayload.CODEC,(payload,context) -> context.enqueueWork(() -> {
             if(context.flow()==PacketFlow.SERVERBOUND && context.player() instanceof ServerPlayer player)
                 ServerPickupRules.receive(player,payload,context::reply);
-            else if(context.flow()==PacketFlow.CLIENTBOUND) NeoClientNetworking.receive(payload);
+            else if(context.flow()==PacketFlow.CLIENTBOUND) NeoClientNetworking.receive(payload,context.player());
         }));
     }
 }

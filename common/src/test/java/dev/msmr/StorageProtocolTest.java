@@ -43,4 +43,17 @@ class StorageProtocolTest {
         assertThrows(RuntimeException.class,() -> new FilterPayload(FilterPayload.CHEST_SET,1,new byte[]{1,2,3}).read(StorageProtocol.Edit.class));
         assertThrows(RuntimeException.class,() -> new FilterPayload(FilterPayload.ACTION,1,new byte[30001]).read(StorageProtocol.Action.class));
     }
+    @Test void containerInsertionRestrictionsArePreserved() {
+        var container=new SimpleContainer(1) { @Override public boolean canPlaceItem(int slot,ItemStack stack) { return false; } };
+        var offered=new ItemStack(Items.STONE,10);
+        assertEquals(10,ServerStorage.insert(container,0,offered,true).getCount());
+        assertEquals(10,ServerStorage.insert(container,0,offered,false).getCount());
+        assertTrue(container.isEmpty()); assertEquals(10,offered.getCount());
+    }
+    @Test void deeplyNestedAndCommentedNetworkJsonIsRejectedBeforeGsonParsing() {
+        assertThrows(RuntimeException.class,() -> FilterPayload.encode(FilterPayload.CHEST_SET,1,Map.of("ignored",new Object[0])).read(StorageProtocol.Edit.class));
+        assertThrows(IllegalArgumentException.class,() -> FilterPayload.validateDepth("[".repeat(33)+"0"+"]".repeat(33)));
+        assertThrows(IllegalArgumentException.class,() -> FilterPayload.validateDepth("/* \" */ [0]"));
+        assertDoesNotThrow(() -> FilterPayload.validateDepth("{\"text\":\"[\\\"{\",\"values\":[1,true,null]}"));
+    }
 }

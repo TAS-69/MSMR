@@ -1,5 +1,17 @@
 # Releases
 
+## 0.11.0 · Your claim. Your chest rules.
+
+- **Claim-aware permissions:** FTB Chunks and Open Parties and Claims govern shared filter editing. Optional hybrid adapters cover WorldGuard, GriefPrevention, LWC, Bolt and LockettePro. A provider API supports additional systems. Bukkit adapters are experimental and have not been live tested.
+- **Live permission checks:** access, editing, deposit and withdrawal are checked separately on every server action. Both double-chest halves must permit the action. Revoked access and failed protection APIs refuse changes safely.
+- **Pickup reliability:** acknowledged pickup rules survive death and respawn on supported servers. Lost rule acknowledgements continue recovering after the initial retries.
+- **Inventory fixes:** Creative palette packets obey server filters and caps; number-key swaps obey whole-inventory caps; advanced edits preserve existing caps. Standard insertion and sided hopper restrictions stay intact.
+- **Safer synchronization:** oversized edits no longer strand rule revisions; stale connection and chest replies are ignored. Strict payload depth and request budgets bound malformed or excessive work.
+- **Less repeated work:** cached matchers, profile shortcuts, chest serialization and unchanged replies; server arrangement avoids constructing unused click scripts. Failed settings saves retry automatically.
+- **Clearer editing:** chest controls remain read-only while permissions load; item lookup retains keyboard focus after results change.
+
+See [the audit and verification report](docs/AUDIT-0.11.0.md) for evidence, compatibility boundaries and remaining limitations.
+
 ## 0.10.0 · Shared chests. Safer moves.
 
 - **Smaller shortcuts:** 18 × 18 buttons, compact spacing, and smaller item pictures.

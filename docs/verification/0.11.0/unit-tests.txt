@@ -1,0 +1,15 @@
+PASS dev.msmr.ChestProfileTest: 4 tests
+PASS dev.msmr.ClientPolicyTest: 4 tests
+PASS dev.msmr.InventoryProfilesTest: 8 tests
+PASS dev.msmr.InventorySortTest: 10 tests
+PASS dev.msmr.LookupTest: 4 tests
+PASS dev.msmr.PanelLayoutTest: 3 tests
+PASS dev.msmr.PickupFiltersTest: 5 tests
+PASS dev.msmr.QuickProfilesTest: 3 tests
+PASS dev.msmr.ReflectionTest: 3 tests
+PASS dev.msmr.RequestBudgetTest: 2 tests
+PASS dev.msmr.RuleTest: 6 tests
+PASS dev.msmr.ServerProtectionTest: 5 tests
+PASS dev.msmr.SettingsValidationTest: 4 tests
+PASS dev.msmr.StorageProtocolTest: 8 tests
+TOTAL 69 tests; 0 failures; 0 errors

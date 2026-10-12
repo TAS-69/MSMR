@@ -1,0 +1,50 @@
+PASS compatible server acknowledges the versioned networking protocol
+PASS lost rule acknowledgements are retried until server synchronization recovers
+PASS lost shared-rule acknowledgements recover through idempotent edit retries
+PASS automatic edits are acknowledged and shared chest rules remain active
+PASS a real ticking hopper respects the whitelist, reserved slot cap and all blocked chest slots
+PASS the hopper cannot insert blacklisted item types into a shared chest
+PASS closing and reopening reloads the authoritative shared profile
+PASS server-authoritative transfer refuses a blocked destination without losing source items
+PASS lost operation replies retry the identical request ID and preserve inventory counts
+PASS closing immediately after an edit confirms the shared rule before the menu closes
+PASS closing with a lost edit reply waits for the retry and preserves the saved rule
+PASS Shared server storage matches the authoritative saved inventory, counts and components
+PASS Shared server storage survives reconnect with identical item stacks
+PASS server chest rules, slot caps and contents survive a full world save and reconnect
+PASS a replacement chest never inherits a previously shared profile from stale local cache
+PASS profile shortcuts use compact 18 by 18 buttons
+PASS new profiles automatically become shortcuts with their first letter
+PASS mining shortcut reserves the saved hotbar slot, honors caps and preserves components/counts
+PASS combat shortcut swaps the sword into the same saved slot without losing the pickaxe
+PASS missing reserved tool leaves its slot empty and relocates the previous item
+PASS automatic arrangement can be disabled independently of profile switching
+PASS quick profile panel can be hidden in Advanced
+PASS shortcut editor saves a custom letter, colour and single selected item icon automatically
+PASS letter and item-icon shortcut modes can be switched without losing the letter
+PASS an individual profile can be hidden from the quick panel
+PASS shortcut appearances and visibility survive settings reload
+PASS quick panel automatically stops at five profiles while retaining additional saved profiles
+PASS deleting a shortcut profile automatically fills its place from remaining profiles
+PASS transfer all to chest respects its whole profile, slot caps, blocked slots and remainders
+PASS transfer all from chest skips items rejected by the player inventory filter
+PASS chest-to-inventory transfer respects player slot caps and retains unmovable chest items
+PASS Bulk transfer matches the authoritative saved inventory, counts and components
+PASS Bulk transfer survives reconnect with identical item stacks
+PASS reopening the chest confirms the server retained the exact bulk-transfer remainder
+PASS both bulk-transfer controls can be toggled off independently
+PASS disabled bulk transfer cannot move items through its entrypoint
+PASS full inventory arrangement swaps tools without an empty buffer slot
+PASS impossible missing-item reservation in a full inventory leaves all items untouched
+PASS Full-inventory profile arrangement matches the authoritative saved inventory, counts and components
+PASS Full-inventory profile arrangement survives reconnect with identical item stacks
+PASS Advanced settings are organized into three clear categories
+PASS number-key swaps cannot exceed the whole-inventory stack cap
+PASS advanced whole-inventory editing preserves an existing stack cap
+PASS reverting an oversized network edit restores synchronization without consuming a rule revision
+PASS server Creative palette packets cannot bypass movement rejection
+PASS server Creative palette packets cannot exceed the filtered stack cap
+PASS allowed Creative placement still works at the exact filtered cap
+PASS Creative clearing is preserved under movement filters
+PASS pickup rejection survives death and respawn without reconnecting
+PASS respawn preserves the acknowledged rule revision for later server operations

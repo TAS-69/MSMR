@@ -25,6 +25,14 @@ class InventorySortTest {
         var items=inventory(); items.set(0,new ItemStack(Items.STONE,64)); var rules=rules(); rules.set(0,only("@pickaxes",0));
         var plan=InventorySort.plan(items,rules,Rule.OPEN); assertTrue(plan.possible(),plan.error()); assertTrue(plan.result().getFirst().isEmpty()); conserved(items,plan);
     }
+    @Test void serverArrangementMatchesClickPlanningWithoutGeneratingClicks() {
+        var items=inventory(); items.set(0,new ItemStack(Items.IRON_SWORD)); items.set(12,new ItemStack(Items.DIAMOND_PICKAXE));
+        var rules=rules(); rules.set(0,only("@pickaxes",0));
+        var local=InventorySort.plan(items,rules,Rule.OPEN); var server=InventorySort.arrange(items,rules,Rule.OPEN);
+        assertTrue(server.possible(),server.error()); assertTrue(server.clicks().isEmpty());
+        for(int i=0;i<36;i++) assertTrue(ItemStack.matches(local.result().get(i),server.result().get(i)));
+        conserved(items,server);
+    }
     @Test void fullInventorySwapsToolsWithoutAnEmptyBufferSlot() {
         var items=inventory(); for(int i=0;i<36;i++) items.set(i,new ItemStack(Items.IRON_SWORD)); items.set(35,new ItemStack(Items.IRON_PICKAXE));
         var rules=rules(); rules.set(0,only("@pickaxes",0)); var plan=InventorySort.plan(items,rules,Rule.OPEN);

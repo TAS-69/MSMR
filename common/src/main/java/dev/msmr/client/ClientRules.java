@@ -23,6 +23,11 @@ public final class ClientRules {
     private static Settings settings = new Settings();
     private static boolean loaded;
     private static Path file;
+    private static boolean savePending;
+    private static long saveRetryAt;
+    private static ProfileBook shortcutBook;
+    private static QuickProfiles shortcutState;
+    private static long shortcutRevision=-1;
     public record Tools(Boolean transferTo,Boolean transferFrom,Boolean shortcuts,Boolean sortOnSwitch) {
         public Tools { transferTo=transferTo==null?true:transferTo; transferFrom=transferFrom==null?true:transferFrom; shortcuts=shortcuts==null?true:shortcuts; sortOnSwitch=sortOnSwitch==null?true:sortOnSwitch; }
         public static final Tools DEFAULT=new Tools(true,true,true,true);
@@ -110,6 +115,7 @@ public final class ClientRules {
     }
     public static void refresh() {
         Minecraft mc=Minecraft.getInstance();
+        if(loaded && savePending && System.nanoTime()>saveRetryAt) save();
         if (mc.player==null) { attached=null; chest=null; ChestTracker.clear(); rules.clear(); dev.msmr.ServerPickupRules.clearLocal(); ClientCapabilities.update(Rule.OPEN,Map.of()); return; }
         if (file==null) init();
         String next=currentScope(mc);
@@ -148,14 +154,21 @@ public final class ClientRules {
     public static String activeProfile() { return settings.activeProfiles.getOrDefault(scope,"Custom"); }
     public static Tools tools() { return settings.tools; }
     public static String tools(Tools value) { settings.tools=Objects.requireNonNull(value); if(!value.sortOnSwitch()) ClientTransfers.cancelRequestedSort(); return save()?"Saved automatically.":"Settings could not be saved."; }
-    private static QuickProfiles shortcuts() { var value=settings.shortcuts.computeIfAbsent(scope,k -> new QuickProfiles()); if(value.sync(book().names())) save(); return value; }
+    private static QuickProfiles shortcuts() {
+        var current=book(); var value=settings.shortcuts.computeIfAbsent(scope,k -> new QuickProfiles());
+        if(current!=shortcutBook || value!=shortcutState || current.revision()!=shortcutRevision) {
+            shortcutBook=current; shortcutState=value; shortcutRevision=current.revision();
+            if(value.sync(current.names())) save();
+        }
+        return value;
+    }
     public static List<String> quickProfiles() { return shortcuts().names(); }
     public static QuickProfiles.Badge badge(String name) { return shortcuts().badge(name); }
     public static String badge(String name,QuickProfiles.Badge value) {
         try { shortcuts().appearance(name,value); return save()?"Saved automatically.":"Settings could not be saved."; } catch(IllegalArgumentException ex) { return ex.getMessage(); }
     }
     public static String pin(String name,boolean value) {
-        try { shortcuts().pin(name,value); return save()?"Saved automatically.":"Settings could not be saved."; } catch(IllegalArgumentException ex) { return ex.getMessage(); }
+        try { shortcuts().pin(name,value); shortcutRevision=-1; return save()?"Saved automatically.":"Settings could not be saved."; } catch(IllegalArgumentException ex) { return ex.getMessage(); }
     }
     public static String manageProfile(String action,String selected,String name) {
         refresh();
@@ -231,8 +244,8 @@ public final class ClientRules {
             Files.writeString(temporary,JSON.toJson(settings));
             try { Files.move(temporary,file,StandardCopyOption.REPLACE_EXISTING,StandardCopyOption.ATOMIC_MOVE); }
             catch (AtomicMoveNotSupportedException ex) { Files.move(temporary,file,StandardCopyOption.REPLACE_EXISTING); }
-            return true;
-        } catch (Exception ex) { org.slf4j.LoggerFactory.getLogger("MSMR").error("Cannot save client rules",ex); return false; }
+            savePending=false; return true;
+        } catch (Exception ex) { if(!savePending) org.slf4j.LoggerFactory.getLogger("MSMR").error("Cannot save client rules; will retry",ex); savePending=true; saveRetryAt=System.nanoTime()+2_000_000_000L; return false; }
     }
     public static String preset(String action,String name) {
         return manageProfile(action.equals("save")?"save":"switch",name,name);

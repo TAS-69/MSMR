@@ -19,6 +19,13 @@ public final class InventorySort {
         Plan plan=plan(inventory,rules,Rule.OPEN); return plan.possible()?plan.result().toArray(ItemStack[]::new):null;
     }
     public static Plan plan(List<ItemStack> inventory,List<Rule> rules,Rule inventoryRule) {
+        return plan(inventory,rules,inventoryRule,true);
+    }
+    /** Server commits need only the complete allocation, without constructing a vanilla click script. */
+    public static Plan arrange(List<ItemStack> inventory,List<Rule> rules,Rule inventoryRule) {
+        return plan(inventory,rules,inventoryRule,false);
+    }
+    private static Plan plan(List<ItemStack> inventory,List<Rule> rules,Rule inventoryRule,boolean script) {
         if(inventory.size()!=rules.size()) throw new IllegalArgumentException("Slot rules do not match inventory");
         Rule wide=inventoryRule.forMoving();
         List<Rule> movement=rules.stream().map(Rule::forMoving).toList();
@@ -40,7 +47,7 @@ public final class InventorySort {
             }
         }
         if(stock.stream().anyMatch(s -> s.count>0)) return failure("Not enough allowed space. Items were left in place.");
-        return clicks(inventory,result);
+        return script?clicks(inventory,result):new Plan(List.copyOf(result),List.of(),"");
     }
     private static Plan failure(String message) { return new Plan(List.of(),List.of(),message); }
     private static boolean same(ItemStack a,ItemStack b) { return !a.isEmpty() && !b.isEmpty() && ItemStack.isSameItemSameComponents(a,b); }

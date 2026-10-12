@@ -1,0 +1,71 @@
+PASS compatible server acknowledges the versioned networking protocol
+PASS automatic edits are acknowledged and shared chest rules remain active
+PASS a real ticking hopper respects the whitelist, reserved slot cap and all blocked chest slots
+PASS the hopper cannot insert blacklisted item types into a shared chest
+PASS closing and reopening reloads the authoritative shared profile
+PASS server-authoritative transfer refuses a blocked destination without losing source items
+PASS closing immediately after an edit confirms the shared rule before the menu closes
+PASS physical chest NBT retains rules, revision and filter ownership
+PASS second test player has no operator permission
+PASS another player without MSMR client rules cannot insert into a blocked shared chest
+PASS shared insertion filters still let another player remove existing items
+PASS another player receives the shared profile with read-only permission
+PASS a non-owner cannot clear or replace shared chest rules
+PASS stale chest edits cannot overwrite newer authoritative rules
+PASS server operations use the live player's own inventory
+PASS retrying the same operation ID never transfers newly added items a second time
+PASS stale inventory state rejects the operation without changing either inventory
+PASS a stale or forged chest session token cannot transfer items
+PASS bulk entity/dropper insertion returns the exact remainder at a filtered stack cap
+PASS mob-style insertion through vanilla container transfer cannot bypass the filter
+PASS claim-authorized non-owner can edit existing shared filters
+PASS claim authority overrides old filter ownership without silently replacing the fallback owner
+PASS revoked claim access stops sharing chest rules through an already-open menu
+PASS revoked access rejects to_chest without changing either inventory
+PASS revoked access rejects from_chest without changing either inventory
+PASS revoked access rejects quick_move without changing either inventory
+PASS revoked access rejects reserved without changing either inventory
+PASS revoked access rejects sort without changing either inventory
+PASS container access can be granted separately from permission to edit its filters
+PASS read-only claim access cannot write chest filters
+PASS a failed protection API rejects server transfers without consuming items
+PASS filter owner and operator do not bypass a failing protection provider
+PASS Shared server storage matches the authoritative saved inventory, counts and components
+PASS Shared server storage survives reconnect with identical item stacks
+PASS server chest rules, slot caps and contents survive a full world save and reconnect
+PASS a replacement chest never inherits a previously shared profile from stale local cache
+PASS profile shortcuts use compact 18 by 18 buttons
+PASS new profiles automatically become shortcuts with their first letter
+PASS mining shortcut reserves the saved hotbar slot, honors caps and preserves components/counts
+PASS combat shortcut swaps the sword into the same saved slot without losing the pickaxe
+PASS missing reserved tool leaves its slot empty and relocates the previous item
+PASS automatic arrangement can be disabled independently of profile switching
+PASS quick profile panel can be hidden in Advanced
+PASS shortcut editor saves a custom letter, colour and single selected item icon automatically
+PASS letter and item-icon shortcut modes can be switched without losing the letter
+PASS an individual profile can be hidden from the quick panel
+PASS shortcut appearances and visibility survive settings reload
+PASS quick panel automatically stops at five profiles while retaining additional saved profiles
+PASS deleting a shortcut profile automatically fills its place from remaining profiles
+PASS transfer all to chest respects its whole profile, slot caps, blocked slots and remainders
+PASS transfer all from chest skips items rejected by the player inventory filter
+PASS chest-to-inventory transfer respects player slot caps and retains unmovable chest items
+PASS Bulk transfer matches the authoritative saved inventory, counts and components
+PASS Bulk transfer survives reconnect with identical item stacks
+PASS reopening the chest confirms the server retained the exact bulk-transfer remainder
+PASS both bulk-transfer controls can be toggled off independently
+PASS disabled bulk transfer cannot move items through its entrypoint
+PASS full inventory arrangement swaps tools without an empty buffer slot
+PASS impossible missing-item reservation in a full inventory leaves all items untouched
+PASS Full-inventory profile arrangement matches the authoritative saved inventory, counts and components
+PASS Full-inventory profile arrangement survives reconnect with identical item stacks
+PASS Advanced settings are organized into three clear categories
+PASS number-key swaps cannot exceed the whole-inventory stack cap
+PASS advanced whole-inventory editing preserves an existing stack cap
+PASS reverting an oversized network edit restores synchronization without consuming a rule revision
+PASS server Creative palette packets cannot bypass movement rejection
+PASS server Creative palette packets cannot exceed the filtered stack cap
+PASS allowed Creative placement still works at the exact filtered cap
+PASS Creative clearing is preserved under movement filters
+PASS pickup rejection survives death and respawn without reconnecting
+PASS respawn preserves the acknowledged rule revision for later server operations

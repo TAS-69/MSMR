@@ -34,6 +34,7 @@ public final class ClientCapabilities {
         } else if(transport!=null && transport.canSend()) transport.send(payload);
     }
     public static void receive(FilterPayload payload) {
+        if(connection!=Minecraft.getInstance().getConnection() || connection==null) return;
         if(payload.kind()==FilterPayload.HELLO && payload.revision()==FilterPayload.VERSION) { if(!confirmed) { confirmed=true; sent=null; } }
         else if(confirmed && payload.kind()==FilterPayload.ACK && payload.revision()<=revision) { ack=Math.max(ack,payload.revision()); if(ack==revision) { pending=null; if(failed==null) error=""; } }
         else if(confirmed && payload.kind()==FilterPayload.CHEST_STATE) ClientChestSync.receive(payload);
@@ -46,10 +47,15 @@ public final class ClientCapabilities {
         if(!confirmed && now-lastProbe>2_000_000_000L) { lastProbe=now; send(FilterPayload.signal(FilterPayload.PROBE,FilterPayload.VERSION)); }
         if(!confirmed) return;
         FilterSnapshot value=new FilterSnapshot(wide,slots);
+        // Returning to the last valid filter must also recover from a rejected oversized edit.
+        if(value.equals(sent) && failed!=null) { failed=null; error=""; }
         if(!value.equals(sent) && !value.equals(failed)) try {
-            pending=FilterPayload.rules(++revision,value); sent=value; failed=null; retries=0; pendingSince=now; send(pending); error="";
-        } catch(RuntimeException ex) { failed=value; pending=null; error="Server sync failed: filter is too large."; }
-        if(pending!=null && now-pendingSince>2_000_000_000L) { pendingSince=now; if(++retries<=3) send(pending); else error="Server has not confirmed inventory filters. Waiting safely."; }
+            var nextPacket=FilterPayload.rules(revision+1,value); revision++; pending=nextPacket; sent=value; failed=null; retries=0; pendingSince=now; send(pending); error="";
+        } catch(RuntimeException ex) { failed=value; error="Server sync failed: filter is too large."; }
+        if(pending!=null && now-pendingSince>(retries<3?2_000_000_000L:10_000_000_000L)) {
+            pendingSince=now; retries=Math.min(4,retries+1); send(pending);
+            if(retries>3) error="Server has not confirmed inventory filters. Retrying safely.";
+        }
         ClientChestSync.update(); ClientOperations.tick();
     }
     public static boolean synced() { return confirmed && sent!=null && ack==revision && failed==null; }

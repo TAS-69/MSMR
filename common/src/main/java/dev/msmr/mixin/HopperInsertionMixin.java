@@ -13,6 +13,9 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 public abstract class HopperInsertionMixin {
     @Inject(method="tryMoveInItem",at=@At("HEAD"),cancellable=true)
     private static void msmr$insert(Container source,Container destination,ItemStack stack,int slot,Direction direction,CallbackInfoReturnable<ItemStack> ci) {
-        if(ServerStorage.guarded(destination,slot)) ci.setReturnValue(ServerStorage.insert(destination,slot,stack,false));
+        if(ServerStorage.guarded(destination,slot)) {
+            if(destination instanceof net.minecraft.world.WorldlyContainer sided && direction!=null && !sided.canPlaceItemThroughFace(slot,stack,direction)) ci.setReturnValue(stack);
+            else ci.setReturnValue(ServerStorage.insert(destination,slot,stack,false));
+        }
     }
 }

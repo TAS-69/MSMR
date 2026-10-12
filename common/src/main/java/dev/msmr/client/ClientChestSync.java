@@ -15,10 +15,11 @@ public final class ClientChestSync {
     private static long latest,pollAt,editAt;
     private static int retries;
     private static String notice="";
+    private static final Set<Long> reads=new HashSet<>();
     private static boolean closing;
     private static long closeAt;
     private ClientChestSync() {}
-    public static void reset() { menu=null; state=null; desired=null; edit=null; latest=0; pollAt=0; notice=""; closing=false; }
+    public static void reset() { menu=null; state=null; desired=null; edit=null; latest=0; pollAt=0; notice=""; closing=false; reads.clear(); }
     public static boolean closing() { return closing; }
     public static boolean deferClose() {
         var player=Minecraft.getInstance().player;
@@ -27,8 +28,8 @@ public final class ClientChestSync {
     }
     public static boolean ready() { return state!=null && edit==null && desired==null; }
     public static long token() { return state==null?0:state.token(); }
-    public static boolean canEdit() { return !ClientCapabilities.available() || state==null || state.editable(); }
-    public static String description() { return !ClientCapabilities.available()?"Local only; automation needs server support.":state==null?"Loading shared chest rules...":!notice.isEmpty()?notice:!state.editable()?"Shared rules. Owner/operator edits only.":edit!=null || desired!=null?"Syncing shared rules...":"Shared rules protect automation and all players."; }
+    public static boolean canEdit() { return !ClientCapabilities.available() || state!=null && state.editable(); }
+    public static String description() { return !ClientCapabilities.available()?"Local only; automation needs server support.":state==null?"Loading shared chest rules...":!notice.isEmpty()?notice:!state.editable()?"Read only. Claim/chest permission required.":edit!=null || desired!=null?"Syncing shared rules...":"Shared rules; server protection permissions apply."; }
     public static void edited() { if(ClientCapabilities.available()) { desired=ClientRules.chestProfiles(); notice=""; } }
     public static void update() {
         var mc=Minecraft.getInstance(); var next=mc.player.containerMenu;
@@ -45,20 +46,21 @@ public final class ClientChestSync {
             return;
         }
         if(desired!=null && state!=null) {
-            if(!state.editable()) { desired=null; ClientRules.acceptChestProfiles(state.profiles()); notice="Only the filter owner or a server operator can edit shared rules."; return; }
+            if(!state.editable()) { desired=null; ClientRules.acceptChestProfiles(state.profiles()); notice="Claim/chest protection or filter ownership prevents editing."; return; }
             if(desired.equals(state.profiles())) { desired=null; return; }
             try { edit=FilterPayload.encode(FilterPayload.CHEST_SET,ClientCapabilities.nextRequest(),new StorageProtocol.Edit(menu.containerId,state.token(),state.versions(),desired)); desired=null; editAt=now; retries=0; ClientCapabilities.send(edit); }
             catch(RuntimeException ex) { desired=null; edit=null; ClientRules.acceptChestProfiles(state.profiles()); notice="Rules exceed the server sync limit. The saved server rules were restored."; mc.player.displayClientMessage(Component.literal(notice),true); }
             return;
         }
-        if(now-pollAt>1_000_000_000L) { pollAt=now; ClientCapabilities.send(FilterPayload.encode(FilterPayload.CHEST_GET,ClientCapabilities.nextRequest(),new StorageProtocol.Get(menu.containerId))); }
+        if(now-pollAt>1_000_000_000L) { pollAt=now; long id=ClientCapabilities.nextRequest(); reads.removeIf(old -> old<id-8); reads.add(id); ClientCapabilities.send(FilterPayload.encode(FilterPayload.CHEST_GET,id,new StorageProtocol.Get(menu.containerId))); }
     }
     public static void receive(FilterPayload packet) {
         try {
+            if((edit==null || packet.revision()!=edit.revision()) && !reads.remove(packet.revision())) return;
             var incoming=packet.read(StorageProtocol.State.class); var mc=Minecraft.getInstance();
             if(menu==null || mc.player==null || mc.player.containerMenu!=menu || incoming.menu()!=menu.containerId || packet.revision()<latest) return;
             latest=packet.revision();
-            if(incoming.profiles().isEmpty()) { state=incoming; desired=null; edit=null; notice="Server could not identify this storage block."; return; }
+            if(incoming.profiles().isEmpty()) { state=incoming; desired=null; edit=null; notice=incoming.message().isEmpty()?"Server could not identify this storage block.":incoming.message(); return; }
             boolean first=state==null; List<ChestProfile> local=ClientRules.chestProfiles(); state=incoming;
             if(edit!=null && packet.revision()==edit.revision()) edit=null;
             if(!incoming.message().isEmpty()) { desired=null; notice=incoming.message(); mc.player.displayClientMessage(Component.literal(notice),true); }

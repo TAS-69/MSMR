@@ -40,9 +40,29 @@ public record FilterPayload(int kind,long revision,byte[] data) implements Custo
         try(GZIPInputStream gzip=new GZIPInputStream(new ByteArrayInputStream(data))) {
             byte[] plain=gzip.readNBytes(1_000_001);
             if(plain.length>1_000_000) throw new IllegalArgumentException("Filters packet too large");
-            T result=JSON.fromJson(new String(plain,StandardCharsets.UTF_8),type);
+            String json=new String(plain,StandardCharsets.UTF_8);
+            validateDepth(json);
+            T result=JSON.fromJson(json,type);
             if(result==null) throw new IllegalArgumentException("Missing filters");
             return result;
         } catch(IOException ex) { throw new IllegalArgumentException("Invalid compressed filters",ex); }
+    }
+    /** Bound parser recursion even when unknown JSON fields are supplied. */
+    static void validateDepth(String json) {
+        int depth=0;
+        try(var reader=new com.google.gson.stream.JsonReader(new StringReader(json))) {
+            reader.setLenient(false);
+            while(true) switch(reader.peek()) {
+                case BEGIN_OBJECT -> { if(++depth>32) throw new IllegalArgumentException("Filters are nested too deeply"); reader.beginObject(); }
+                case BEGIN_ARRAY -> { if(++depth>32) throw new IllegalArgumentException("Filters are nested too deeply"); reader.beginArray(); }
+                case END_OBJECT -> { reader.endObject(); depth--; }
+                case END_ARRAY -> { reader.endArray(); depth--; }
+                case NAME -> reader.nextName();
+                case STRING,NUMBER -> reader.nextString();
+                case BOOLEAN -> reader.nextBoolean();
+                case NULL -> reader.nextNull();
+                case END_DOCUMENT -> { return; }
+            }
+        } catch(IOException ex) { throw new IllegalArgumentException("Invalid filters JSON",ex); }
     }
 }
